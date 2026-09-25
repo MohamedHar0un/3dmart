@@ -15,3 +15,7 @@ Rules:
 - Plain, direct English. No marketing language.
 
 When you finish, return the files written and any open questions.
+
+## Skills, environment and status
+
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

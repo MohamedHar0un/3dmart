@@ -17,3 +17,9 @@ Rules:
 - Load tests (k6) target the §15 figures at 3× the expected peak, and report p50/p95/p99 and error rate.
 
 When you finish, return: tests added (by name), which acceptance criteria they cover, results, and bugs found (with reproduction steps).
+
+## Skills, environment and status
+
+- Skills: `systematic-debugging` to isolate failures; `impeccable` `audit` when checking UI acceptance criteria.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

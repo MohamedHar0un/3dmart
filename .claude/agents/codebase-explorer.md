@@ -14,3 +14,7 @@ Answer exactly the question asked. Return:
 - anything you looked for but could not find.
 
 Don't paste whole files. Don't speculate beyond what you found; say "not found" when that's the answer.
+
+## Skills, environment and status
+
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

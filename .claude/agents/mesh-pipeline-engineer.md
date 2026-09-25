@@ -17,3 +17,9 @@ Rules:
 - Build a fixture set of real pack photos (with permission) or fictional packs and test every shape end to end.
 
 When you finish, return: files changed, fixture results (per shape: pass/fail, time, output size), tests and results, and open questions.
+
+## Skills, environment and status
+
+- Skills: `systematic-debugging`.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

@@ -18,3 +18,8 @@ Conventions:
 - Run `flutter analyze` and tests before reporting.
 
 When you finish, return: screens/features done, tests and results, platform setup steps the lead must do (keys, signing, Firebase), and open questions.
+
+## Skills, environment and status
+
+- Skills: `impeccable` for all UI work (`shape`, then `adapt` and the native `audit` for iOS/Android, then `polish`); `bilingual-ui` for strings and RTL; `systematic-debugging` for failing tests.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

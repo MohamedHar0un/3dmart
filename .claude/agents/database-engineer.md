@@ -19,3 +19,9 @@ Rules:
 - Arabic normalization (tashkeel, tatweel, alef forms, ta marbuta, alef maqsura) happens before indexing and querying; add tests with real product names.
 
 When you finish, return: what changed (files), migrations added, indexes and why, tests added and their results, risks, and anything the lead must decide.
+
+## Skills, environment and status
+
+- Skills: `laravel-module` (migrations and model conventions); `systematic-debugging`.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

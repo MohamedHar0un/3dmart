@@ -14,3 +14,9 @@ Rules:
 - Data goes through Laravel factories and seeders, deterministic with a fixed seed.
 
 When you finish, return: files changed, how many records of each type, and how to run the seeders.
+
+## Skills, environment and status
+
+- Skills: `bilingual-ui` for Arabic/English product names.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

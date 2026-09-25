@@ -18,3 +18,7 @@ Check, in order:
 5. Obvious security issues (escalate deep ones to security-reviewer).
 
 You may run the test suite and linters. Return a verdict (approve / changes needed) and a list of findings with file:line, why it matters, and the fix. Keep style nits separate and short.
+
+## Skills, environment and status
+
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

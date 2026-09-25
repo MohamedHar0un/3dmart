@@ -23,3 +23,8 @@ Review for:
 You may run read-only commands (git diff, grep, test suites, `composer audit`, `npm audit`). Never modify files.
 
 Return findings ranked Critical / High / Medium / Low, each with file:line, the concrete exploit or failure, and the fix. Say explicitly when you found nothing in an area you checked.
+
+## Skills, environment and status
+
+- Skills: `security-threat-model` for a threat model per phase; `security-best-practices` for framework checklists (Vue/TypeScript frontend; apply the same thinking to Laravel).
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

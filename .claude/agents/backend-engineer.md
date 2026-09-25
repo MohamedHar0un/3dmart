@@ -16,8 +16,14 @@ Conventions:
 - State machines are explicit; every transition is authorized, logged and emits events.
 - Jobs are idempotent and safe to retry; pick the right queue (`payments`, `default`, `notifications`, `media`, `models3d`, `analytics`, `webhooks`).
 - Translatable strings in both Arabic and English.
-- Write Pest feature tests first for the acceptance criteria you were given. Run Pint and Larastan before reporting.
+- Write Pest feature tests first for the acceptance criteria you were given. Run Pint and Larastan (through Sail) before reporting.
 
 Do not change migrations owned by another module, the OpenAPI contract of an existing endpoint, or shared config without the lead's approval: ask in your report instead.
 
 When you finish, return: files changed, endpoints added/changed, tests and results (paste the summary line), and open questions.
+
+## Skills, environment and status
+
+- Skills: `laravel-module` for new modules, endpoints, jobs and policies; `bilingual-ui` for every user-facing string; `systematic-debugging` for failing tests.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

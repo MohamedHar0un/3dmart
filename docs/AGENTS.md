@@ -54,14 +54,47 @@ The team has 17 subagents plus the lead:
 - Sonnet 5: 8;
 - Haiku 4.5: 4.
 
-### Why each Opus seat is Opus
+### 2.1 Skills each agent uses
+
+Skills live in `.claude/skills/`. Third-party ones are pinned and listed in `.claude/skills/THIRD_PARTY.md`.
+
+| Skill | What it gives | Used by |
+|---|---|---|
+| `impeccable` | Design direction and UI quality. Commands: `init` (PRODUCT.md), `shape` (plan a surface), `critique`, `audit` (accessibility, performance, responsive, plus a native audit for iOS/Android), `polish`, `harden` (errors, i18n, edge cases), `adapt`, `onboard`, `typeset`, `layout`, `colorize`, `animate` | frontend-engineer, flutter-engineer, localization-specialist (`harden`), lead (design reviews), phase gate |
+| `dataviz` (built in) | Chart and dashboard conventions | frontend-engineer (supplier and admin dashboards) |
+| `bilingual-ui` (project) | Arabic/English strings and RTL rules for Laravel, Vue and Flutter | frontend-engineer, flutter-engineer, backend-engineer, localization-specialist |
+| `laravel-module` (project) | How to add a domain module, endpoint, job or policy the project's way | backend-engineer, payments-engineer, database-engineer |
+| `agent-dispatch` (project) | Task hand-off message and the progress formats | lead |
+| `phase-gate` (project) | End-of-phase checklist | lead |
+| `writing-plans`, `executing-plans` | Structured plans and plan execution with checkpoints | lead |
+| `cto-review` | CTO-style critique of a plan or proposal | lead (before plan review), principal-reviewer |
+| `systematic-debugging` | Root-cause debugging for failing tests and bugs | every implementer, qa-engineer |
+| `security-threat-model`, `security-best-practices` | Threat model per phase; framework security checklists (includes Vue/TypeScript) | security-reviewer |
+| `github-actions-templates` | CI/CD workflow patterns | devops-engineer |
+| `skill-finder` | Finds and installs community skills; creates new ones when none fit | lead, before each phase |
+| run recipe from `/run-skill-generator` | How to install and launch the app with Laravel Sail; used by `/run` and `/verify` | every agent that runs the app (created in Phase 0) |
+
+Before each phase the lead runs `skill-finder` for that phase's specialised areas:
+
+| Phase | Areas to search |
+|---|---|
+| 1 | Laravel, Inertia, Vue, Flutter |
+| 2 | PostGIS |
+| 3 | Three.js, glTF |
+| 4 | Paymob, Fawry, Firebase |
+| 6 | OpenCV, n8n |
+| 7 | k6 |
+
+For each area, the lead either vendors a credible skill (pinned in `THIRD_PARTY.md`) or writes a project skill if the need will recur. The skills registry isn't reachable from every environment. If it isn't, search GitHub for the skill and vendor it by commit, as done for Impeccable.
+
+### 2.2 Why each Opus seat is Opus
 
 - **Database:** schema and migration mistakes are the most expensive to fix later, and the extension and partitioning choices need judgment.
 - **Payments:** money correctness under retries, duplicate webhooks and partial refunds. A bug here costs real money and trust.
 - **3D engine:** hitting 30 fps on a mid-range Android inside a WebView is a hard performance-engineering problem with many trade-offs.
 - **Security review:** missed issues have a high cost; the review is read-only, so it's a small share of total tokens.
 
-### Why Opus agents use `model: inherit`
+### 2.3 Why Opus agents use `model: inherit`
 
 They run on the same model as the lead. Start the lead on Opus 5.5 and these agents get exactly Opus 5.5, without depending on what the `opus` alias points to on a given account. If you ever run the lead on another model, change these four files to an explicit model.
 
@@ -69,31 +102,55 @@ They run on the same model as the lead. Start the lead on Opus 5.5 and these age
 
 ## 3. How the lead runs a phase
 
+The lead owns the outcome. The product owner reviews exactly two things: the **phase plan** and the **design direction**. Everything else the lead decides and records in ADRs.
+
 ```
- Plan ──► Contracts ──► Build (parallel) ──► Review ──► Verify ──► Gate ──► Demo
- lead     lead + DB/    implementers in       code-      test-      principal  docs-
-          payments      separate worktrees    reviewer   runner,    reviewer + writer
-                                              (+security qa         security
-                                              if risky)             reviewer
+ Plan ──► ⏸ Plan ──► Contracts ──► ⏸ Design ──► Build (parallel) ──► Review ──► Verify ──► Gate ──► Demo
+ lead     review     lead + DB/    review        implementers in      code-      test-      principal  docs-
+          (owner)    payments      (owner, new   separate worktrees   reviewer   runner,    reviewer + writer
+                                   UI surfaces)                       (+security qa         security
+                                                                      if risky)             reviewer
 ```
 
-1. **Plan.** The lead reads the phase in `docs/BRIEF.md` §14 and writes a task list in `docs/plan/phase-N.md`. Each task has: an owner agent, inputs, acceptance criteria (named tests), and dependencies.
-2. **Contracts first.** Before parallel work starts, the lead (with `database-engineer`, and `payments-engineer` where money is involved) fixes the shared contracts:
+1. **Plan.** The lead reads the phase in `docs/BRIEF.md` §14 and writes `docs/plan/phase-N.md` with the `writing-plans` skill. Each task has an owner agent, inputs, acceptance criteria (named tests), skills to use, and dependencies. The plan also lists the brief decisions (D-numbers) the phase depends on, each with a recommendation. The lead checks the plan with the `cto-review` skill.
+2. **⏸ Plan review.** The lead sends the plan in the plan-review format from `CLAUDE.md` and waits for "approved".
+3. **Contracts.** Before parallel work starts, the lead (with `database-engineer`, and `payments-engineer` where money is involved) fixes the shared contracts:
    - migrations and ERD for the phase;
    - OpenAPI changes;
    - JS bridge messages;
    - store manifest format.
 
    Implementers build against these and don't change them without asking.
-3. **Build in parallel.** Independent tasks run concurrently, each in its own git worktree (`isolation: worktree`) so agents don't overwrite each other. Typical parallel sets are in §4.
-4. **Review every change.** `code-reviewer` reviews every diff. `security-reviewer` also reviews anything touching auth, permissions, supplier data, webhooks, uploads, secrets or infra exposure.
-5. **Verify.** `test-runner` runs the full suite and returns a digest. `qa-engineer` fills missing tests and checks acceptance criteria end to end.
-6. **Gate.** At the end of the phase, `principal-reviewer` (Fable 5.1) checks each acceptance criterion with evidence and looks for costly design problems. `security-reviewer` does a full pass.
-7. **Demo.** `docs-writer` writes `docs/demos/phase-N.md`. The lead merges to `main`, and Argo CD deploys to staging.
+4. **⏸ Design review** (phases with new UI surfaces).
+   - `frontend-engineer` / `flutter-engineer` run the `impeccable` skill's `shape` for each new surface and build a clickable preview in Arabic and English.
+   - The lead sends it in the design-review format and waits for "approved".
+   - The first time, this also covers `PRODUCT.md` and `DESIGN.md` (impeccable `init`).
+5. **Build in parallel.** Independent tasks run concurrently, each in its own git worktree (`isolation: worktree`) so agents don't overwrite each other. Typical parallel sets are in §4. The lead reports every start and finish with the `agent-dispatch` formats (§3.1).
+6. **Review every change.** `code-reviewer` reviews every diff. `security-reviewer` also reviews anything touching auth, permissions, supplier data, webhooks, uploads, secrets or infra exposure.
+7. **Verify.** `test-runner` runs the full suite and returns a digest. `qa-engineer` fills missing tests and checks acceptance criteria end to end.
+8. **Gate.** The lead runs the `phase-gate` skill:
+   - `principal-reviewer` (Fable 5.1) checks each acceptance criterion with evidence and looks for costly design problems;
+   - `security-reviewer` does a full pass;
+   - UI surfaces get an impeccable `audit` and `polish`.
+9. **Demo.** `docs-writer` writes `docs/demos/phase-N.md`. The lead merges to `main`, and Argo CD deploys to staging.
 
-### What every subagent returns
+### 3.1 Showing what each agent is doing
+
+The product owner follows progress through the lead's messages. The lead uses the `agent-dispatch` skill for all of it:
+
+- **When an agent starts:** `▶ backend-engineer (Sonnet 5, high) · P1-T01 · OTP sign-in API and rate limits`
+- **When it returns:**
+  - `✓ backend-engineer · P1-T01 · sign-in API done · tests: 42/42`
+  - or `✗ … · next: escalate to Opus 5.5`
+- **At each milestone:** a progress table (agent, task, status, note), plus blockers and anything awaiting review.
+- **Always:** `docs/plan/status.md` holds the latest table and the log of dispatch and result lines, committed with the work.
+
+Subagents can't message the product owner while they run. Each one's report starts with a one-line status that the lead relays as-is.
+
+### 3.2 What every subagent returns
 
 Every agent's definition ends with its report format. In short:
+- a one-line status first (done / blocked, with the key number, such as tests passed);
 - what changed (files);
 - tests added and their results (the summary line, not the full log);
 - decisions it made and anything it needs the lead to decide;
@@ -101,7 +158,7 @@ Every agent's definition ends with its report format. In short:
 
 Subagents never talk to the product owner directly; questions go through the lead.
 
-### Escalation ladder
+### 3.3 Escalation ladder
 
 When an agent fails a task (tests still red, reviewer rejects twice):
 
@@ -146,8 +203,8 @@ Keep 3–5 build streams running at once. More streams mean more merge conflicts
 ## 6. Starting the team
 
 1. Open the repo in Claude Code and set the main session to Claude Opus 5.5 with `/model`.
-2. Check the team is loaded with `/agents`.
+2. Check the team with `/agents`, and the skills are listed (for example, `/impeccable` is available).
 3. Paste the kickoff prompt from `docs/BRIEF.md` §0.
-4. The lead starts Phase 0 by writing `docs/plan/phase-0.md` and delegating.
+4. The lead writes `docs/plan/phase-0.md` and sends it for plan review. After approval it runs Phase 0 through the team. Phase 0 includes Laravel Sail and the `/run-skill-generator` run recipe.
 
 To change an agent's model or effort, edit the `model:` / `effort:` line in its file under `.claude/agents/`, and update the table in §2.

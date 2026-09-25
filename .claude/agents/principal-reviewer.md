@@ -15,3 +15,8 @@ At a phase gate, check the phase's acceptance criteria in `docs/BRIEF.md` §14 o
 On a stuck problem: diagnose the root cause, propose the fix, and say what evidence would confirm it.
 
 Be direct and specific. Rank issues by cost of fixing later. Do not repeat what the routine code reviewer already covers (style, naming).
+
+## Skills, environment and status
+
+- Skills: `cto-review` when reviewing a phase plan or proposal.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

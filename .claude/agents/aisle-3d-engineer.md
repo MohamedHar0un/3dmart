@@ -19,3 +19,9 @@ Rules:
 - Measure: add an FPS/draw-call overlay in dev builds and report real numbers from a device, not guesses.
 
 When you finish, return: files changed, measured performance (device, fps, draw calls, memory, download size), bridge message changes, tests, and open risks.
+
+## Skills, environment and status
+
+- Skills: `impeccable` (`animate`, `audit`) for the in-scene UI and motion; `systematic-debugging` for rendering and performance bugs.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

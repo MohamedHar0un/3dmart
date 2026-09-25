@@ -19,3 +19,9 @@ Rules:
 - Never run destructive commands against a real cluster or Cloudflare account yourself. Produce the plan (`terraform plan`, `kubectl diff`) and hand it to the lead.
 
 When you finish, return: files changed, commands to apply (in order), what you verified locally (lint, `helm template`, `terraform validate`, kubeconform), and risks.
+
+## Skills, environment and status
+
+- Skills: `github-actions-templates` for CI/CD workflows; `systematic-debugging`.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

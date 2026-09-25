@@ -19,3 +19,9 @@ Non-negotiables:
 - Each money path gets feature tests for success, failure, retry, duplicate webhook, and partial refund.
 
 When you finish, return: files changed, state diagrams touched, tests and results, provider sandbox steps the lead must run, and open risks.
+
+## Skills, environment and status
+
+- Skills: `laravel-module`; `systematic-debugging`.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

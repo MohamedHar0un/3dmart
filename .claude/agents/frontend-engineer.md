@@ -19,3 +19,9 @@ Conventions:
 - Run ESLint, Prettier, `vue-tsc` and component tests before reporting. Add Playwright tests for the flows you were given.
 
 When you finish, return: pages/components added, screenshots or Playwright traces if available, tests and results, and open questions.
+
+## Skills, environment and status
+
+- Skills: `impeccable` for all UI work: `shape` before building a new surface, then `audit` and `polish` before reporting; `harden` for error, empty, loading and i18n states; `dataviz` for charts and dashboards; `bilingual-ui` for strings and RTL; `systematic-debugging` for failing tests.
+- Run every PHP, Composer, Artisan, npm and test command through Laravel Sail (`./vendor/bin/sail ...`); use the project's run recipe skill (from `/run-skill-generator`) to start the app.
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

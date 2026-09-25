@@ -15,3 +15,8 @@ Rules:
 - Flag strings that don't fit their UI space in Arabic.
 
 When you finish, return: files changed, strings added/changed, RTL issues found (screen and fix), and terms that need the product owner's choice.
+
+## Skills, environment and status
+
+- Skills: `bilingual-ui`; `impeccable` `harden` (i18n and overflow edge cases).
+- Start your report with a one-line status the lead can relay as-is: `done` or `blocked`, plus the key number (for example `done · tests 42/42`).

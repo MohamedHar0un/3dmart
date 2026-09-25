@@ -10,12 +10,12 @@
 1. Read the whole document before writing code. Then read `design/canvas/` in this repo: it is the clickable design (shopper app, supplier dashboard, admin dashboard, proposal, and a Three.js walk-through aisle in `Aisle3D.dc.html`). The design shows intent and UX. It is not production code; don't copy its runtime (`DCLogic`, `support.js`).
 2. Work in the phases in §14. Finish each phase's acceptance criteria before starting the next.
 3. Record every significant technical decision as an ADR in `docs/adr/NNNN-title.md` (context, decision, consequences).
-4. Where this brief says **Ask**, stop and ask the product owner. Everywhere else, make the call, write it down, and keep going.
+4. The product owner reviews only two things: **phase plans** and **design direction** (formats in `CLAUDE.md`). Items marked **Ask** in this brief are raised inside the plan review of the phase that needs them, each with your recommendation. Don't raise them ad hoc. Everywhere else, make the call, write it down in an ADR, and keep going.
 5. Never commit secrets. Never weaken a test to make it pass. Never skip a phase's security items.
 
 **Kickoff prompt to paste into a new session:**
 
-> You are the lead engineer for 3D Mart. Read `docs/BRIEF.md` fully, then `design/canvas/`. Start Phase 0 from §14. Before you write code, propose the repo layout, the ADRs you will write first, and any **Ask** items that block Phase 0. Then build Phase 0 end to end with tests and CI green.
+> You are the team lead for 3D Mart. Read `CLAUDE.md`, `docs/BRIEF.md` and `docs/AGENTS.md` fully, then `design/canvas/`. Write the Phase 0 plan in `docs/plan/phase-0.md` (tasks, owners, contracts, and any **Ask** items Phase 0 depends on, with your recommendation) and send it for review in the plan-review format. Once approved, run Phase 0 through your subagents, reporting each agent's work with the `agent-dispatch` formats, and close it with the `phase-gate` skill.
 
 ---
 
@@ -203,6 +203,7 @@ Use the latest stable release of each at build time. Pin exact versions in lock 
 | Feature flags | Laravel Pennant |
 | Audit | spatie/laravel-activitylog + database triggers for money tables |
 | Observability (app) | Laravel Pulse (ops view), Sentry (errors, performance), OpenTelemetry traces (optional) |
+| Local development | **Laravel Sail** (Docker): the Laravel app on Octane/FrankenPHP, PostgreSQL 18 with the §6.2 extensions, Redis, Mailpit, plus n8n and mesh-builder as extra Sail services. See §10.8. |
 | Testing | Pest (unit, feature, architecture tests), Playwright (web E2E), Larastan level 8+, Pint, ESLint + Prettier, `vue-tsc` |
 | Mobile | Flutter latest stable, Dart 3; Riverpod, go_router, dio, freezed/json_serializable, flutter_localizations + ARB files, firebase_messaging, google_maps_flutter, webview_flutter (3D, §7.3), sentry_flutter |
 | Database | PostgreSQL 18 via the CloudNativePG operator |
@@ -233,10 +234,17 @@ Use the latest stable release of each at build time. Pin exact versions in lock 
 │   ├── terraform/         # Cloudflare (DNS, R2, WAF, Tunnel), optional Contabo provisioning
 │   ├── ansible/           # node hardening, k3s install
 │   ├── k8s/               # Helm values + Kustomize overlays: base, staging, production
-│   └── argocd/            # Argo CD Application manifests
+│   ├── argocd/            # Argo CD Application manifests
+│   └── postgres/          # extensions.txt (one list), Dockerfile.cnpg (cluster), Dockerfile.sail (local dev and CI)
+├── .claude/
+│   ├── agents/            # the subagent team (docs/AGENTS.md)
+│   └── skills/            # project and vendored skills (THIRD_PARTY.md)
 ├── design/canvas/         # existing clickable design (reference only)
+├── PRODUCT.md, DESIGN.md  # product and design context, created with the impeccable skill (§13)
 └── docs/
-    ├── BRIEF.md
+    ├── BRIEF.md, AGENTS.md
+    ├── plan/              # phase-N.md plans and status.md (live progress)
+    ├── demos/             # phase-N.md demo notes
     ├── adr/
     └── runbooks/          # deploy, rollback, restore from backup, rotate secrets, incident
 ```
@@ -793,8 +801,8 @@ Manage all of this with Terraform in `infra/terraform/cloudflare`:
 
 - Build a custom CloudNativePG-compatible PostgreSQL 18 image in CI, starting from the official CloudNativePG PostGIS image and adding pgvector, pg_partman, pg_cron and pgaudit.
 - Set `shared_preload_libraries` for `pg_stat_statements`, `pg_cron` and `pgaudit`. Create the extensions with a migration that runs `CREATE EXTENSION IF NOT EXISTS` (as the owner role).
-- Test the image in CI by running the full test suite against it.
-- Local development and CI use the same image.
+- Keep the extension package list in one file, `infra/postgres/extensions.txt`, used by both images: `Dockerfile.cnpg` for the cluster and `Dockerfile.sail` for Laravel Sail and CI (based on the official `postgres:18` image, which Sail's init scripts expect). Same PostgreSQL major, same extension versions.
+- CI runs the full test suite against the Sail image; a nightly job also runs the migrations against the CloudNativePG image, so the two can't drift.
 - **Backups:**
   - CloudNativePG continuous WAL archiving plus daily base backups to the R2 backups bucket (S3-compatible; verify compatibility in Phase 0 and record it);
   - retention: 30 days;
@@ -838,6 +846,20 @@ Mobile releases:
   - disk space;
   - certificate expiry;
   - Tunnel connectors down.
+
+### 10.8 Local development: Laravel Sail
+
+Laravel Sail (Docker Compose) is the only local environment. Everything a developer or agent runs goes through `./vendor/bin/sail`.
+
+- **Services in `compose.yaml`:**
+  - `laravel.test`: the Sail PHP image, running Octane on FrankenPHP (set Sail's `SUPERVISOR_PHP_COMMAND` to the `octane:start --server=frankenphp` command).
+  - `pgsql`: our `infra/postgres/Dockerfile.sail` image (PostgreSQL 18 with the §6.2 extensions and `shared_preload_libraries`), in place of Sail's stock image. Sail's testing-database init script stays.
+  - `redis`, `mailpit`.
+  - Extra services, added to the same file: `horizon` and `reverb` (the Sail image running `artisan horizon` / `artisan reverb:start`), `n8n` (queue mode off locally, its own database on `pgsql`), and `mesh-builder` (built from `services/mesh-builder`).
+- **Storage:** the `local` / `public` disks locally, so no R2 credentials are needed for everyday work. A shared R2 dev bucket is optional, for testing presigned uploads.
+- **Mobile:** Flutter runs on the host (simulator or device) against the Sail API on the machine's LAN address. The aisle-engine bundle is built with `sail npm run build:engine` and copied into the app assets.
+- **First run:** `composer install` via a one-off Sail container, `cp .env.example .env`, `sail up -d`, `sail artisan key:generate`, `sail artisan migrate --seed`, `sail npm install && sail npm run dev`. Record exactly this with `/run-skill-generator` in Phase 0; after that, `/run` and `/verify` follow the recorded recipe.
+- **CI** uses the same compose services (or the same images as service containers), so "works in Sail" means "works in CI".
 
 ---
 
@@ -916,8 +938,15 @@ Three areas in the same app, each with its own layout, navigation and route pref
   - audit log;
   - data requests.
 
+**Design process** (all web and Flutter UI):
+- Use the **`impeccable`** skill (vendored in `.claude/skills/impeccable`).
+- Once for the product: `init` → `PRODUCT.md`, then `DESIGN.md` seeded from the canvas's look (Bricolage Grotesque, Figtree and IBM Plex Sans Arabic type; green, clay and warm-ground colours).
+- Per new surface: `shape` (plan the UX) → build → `audit` (accessibility, performance, responsive; the native audit for Flutter) → `polish`. Use `harden` for error, empty, loading and i18n states, and `onboard` for first-run flows.
+- The shop and supplier/admin portals are the Operate mode (task completion first); the landing and store-listing pages are Persuade.
+- Design direction for each new surface goes to the product owner for review before it's built (`CLAUDE.md`).
+
 Shared requirements:
-- Arabic and English with RTL across all three areas.
+- Arabic and English with RTL across all three areas (the `bilingual-ui` skill).
 - Accessible components (keyboard, focus, contrast AA), following the canvas's design tokens.
 - Charts follow the dashboard conventions in the design (one axis, single-hue series, hover tooltips, table view).
 
@@ -929,7 +958,7 @@ Each phase ends with its acceptance criteria met, CI green, deployed to staging,
 
 | Phase | Deliverables | Acceptance criteria |
 |---|---|---|
-| **0: Foundations** | Monorepo; Laravel app with the Vue starter kit; Flutter app with both flavors; aisle-engine package skeleton; custom Postgres image with all §6.2 extensions; local dev via Docker Compose; CI pipelines; Terraform for Cloudflare (DNS, R2, Tunnel); Ansible + k3s cluster; Argo CD; staging deployed; monitoring; backups to R2 with one restore tested; ADR-0001…0005 | `https://api.staging…/up` is green through Cloudflare Tunnel; `CREATE EXTENSION` for every §6.2 extension succeeds in CI and on the cluster; a restore drill has been done; staging redeploys automatically from `main` |
+| **0: Foundations** | Monorepo; Laravel app with the Vue starter kit; **Laravel Sail** local environment (§10.8); Flutter app with both flavors; aisle-engine package skeleton; Postgres images (Sail and CloudNativePG) with all §6.2 extensions; CI pipelines; Terraform for Cloudflare (DNS, R2, Tunnel); Ansible + k3s cluster; Argo CD; staging deployed; monitoring; backups to R2 with one restore tested; `PRODUCT.md` + `DESIGN.md` (impeccable `init`) and the approved design direction; the `/run-skill-generator` run recipe; ADR-0001…0005 | A fresh clone runs with `./vendor/bin/sail up -d` plus the run recipe, and `/run` starts the app; `https://api.staging…/up` is green through Cloudflare Tunnel; `CREATE EXTENSION` for every §6.2 extension succeeds in Sail, CI and on the cluster; a restore drill has been done; staging redeploys automatically from `main`; design direction approved |
 | **1: Identity & catalog** | Auth (codes, social, 2FA for staff), roles; catalog, brands, categories, variants, media on R2; search (pg_trgm + full-text + Arabic normalization); admin catalog screens; supplier onboarding and document approval | Shopper can sign in on mobile and web; admin can create products with photos; search finds products with typos in both languages (test suite of 100+ real query/expectation pairs) |
 | **2: Commerce core** | Locations, inventory ledger, prices; delivery zones (PostGIS) and slots; cart, checkout, promotions engine v1 (percent, fixed, code); orders with state machine; COD end to end; list-view shopping in the app and web | A shopper in a covered zone can place a COD order from the list view, and an admin sees it live; addresses outside zones are rejected; stock reserves and releases correctly (property tests) |
 | **3: 3D store** | Planogram model and editor; publish → manifests on R2; aisle-engine (walking, look, pick-up, put back, add to cart, price tags, signage); WebView integration; analytics events (partitioned) | The performance gate in §7.3 passes on the reference devices, with numbers recorded in an ADR; an item added in 3D shows in the cart with the correct server price; the automatic list-view fallback works |
@@ -957,7 +986,7 @@ Each phase ends with its acceptance criteria met, CI green, deployed to staging,
 
 ## 16. Decisions for the product owner
 
-Build to the defaults until these are answered.
+Build to the defaults until these are answered. The team lead raises the ones a phase depends on inside that phase's plan review, with a recommendation; the product owner doesn't get separate questions.
 
 | ID | Question | Default |
 |---|---|---|
