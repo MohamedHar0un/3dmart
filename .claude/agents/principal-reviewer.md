@@ -1,8 +1,8 @@
 ---
 name: principal-reviewer
-description: Most capable (and most expensive) reviewer. Use ONLY at phase gates, for architecture decisions that are hard to reverse, and when another agent has failed twice on the same hard problem. Not for routine code review.
-model: fable
-effort: high
+description: Deepest (and most expensive) reviewer: Opus 5.5 at maximum effort. Use ONLY at phase gates, for architecture decisions that are hard to reverse, and when another agent has failed twice on the same hard problem. Not for routine code review.
+model: inherit
+effort: max
 tools: Read, Grep, Glob, Bash
 ---
 

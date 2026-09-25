@@ -14,8 +14,7 @@ Per-token prices for reference, from Anthropic's price list (input / output, USD
 |---|---|---|---|
 | Claude Haiku 4.5 | $1 / $5 | 1× | Fast, mechanical, well-specified work: searching, running tests and summarising output, docs from given material, seed data |
 | Claude Sonnet 5 | $2 / $10 | 2× | Most implementation: clear tasks with a spec and tests (Laravel modules, Vue pages, Flutter screens, infra code, routine review) |
-| Claude Opus 5.5 | $4 / $20 | 4× | The lead, and the few areas where a mistake is expensive or the problem is genuinely hard: data model, money, real-time 3D performance, security review |
-| Claude Fable 5.1 | $10 / $50 | 10× | Most capable model. Phase-gate reviews, hard-to-reverse architecture calls, and problems another agent has failed on twice. Never routine work. |
+| Claude Opus 5.5 | $4 / $20 | 4× | The lead, and the few areas where a mistake is expensive or the problem is genuinely hard: data model, money, real-time 3D performance, security review. At `max` effort it's also the principal reviewer for phase gates, hard-to-reverse architecture calls, and problems another agent has failed on twice. |
 
 Three rules keep cost down without losing quality:
 
@@ -34,7 +33,7 @@ Three rules keep cost down without losing quality:
 | `payments-engineer` | Opus 5.5 (`inherit`) | high | all | Paymob, Fawry, COD, webhooks, refunds, reconciliation, idempotency, totals and VAT, the model-credit ledger |
 | `aisle-3d-engineer` | Opus 5.5 (`inherit`) | high | all | `packages/aisle-engine` (Three.js): walking, instancing, LOD, streaming, pick-up, JS bridge, Vue wrapper, performance budgets |
 | `security-reviewer` | Opus 5.5 (`inherit`) | xhigh | read-only + Bash | Security review of auth, supplier isolation, webhooks, uploads, secrets, infra exposure, personal data |
-| `principal-reviewer` | **Fable 5.1** | high | read-only + Bash | Phase-gate reviews, irreversible architecture decisions, problems another agent failed twice |
+| `principal-reviewer` | Opus 5.5 (`inherit`) | **max** | read-only + Bash | Phase-gate reviews, irreversible architecture decisions, problems another agent failed twice |
 | `backend-engineer` | Sonnet 5 | high | all | Laravel domain modules, API endpoints, jobs, events, policies, Horizon, Reverb, scheduler |
 | `frontend-engineer` | Sonnet 5 | high | all | Inertia + Vue: shop, supplier portal, admin portal, design system, shelf planner and map editors |
 | `flutter-engineer` | Sonnet 5 | high | all | Shopper and staff apps, WebView host for the 3D aisle, maps, push, payments hand-off |
@@ -49,8 +48,7 @@ Three rules keep cost down without losing quality:
 | `seed-data-generator` | Haiku 4.5 | medium | all | Factories and seeders: fictional brands, Arabic/English products, zones, sample orders |
 
 The team has 17 subagents plus the lead:
-- Fable 5.1: 1;
-- Opus 5.5: 4, plus the lead;
+- Opus 5.5: 5, plus the lead;
 - Sonnet 5: 8;
 - Haiku 4.5: 4.
 
@@ -93,10 +91,11 @@ For each area, the lead either vendors a credible skill (pinned in `THIRD_PARTY.
 - **Payments:** money correctness under retries, duplicate webhooks and partial refunds. A bug here costs real money and trust.
 - **3D engine:** hitting 30 fps on a mid-range Android inside a WebView is a hard performance-engineering problem with many trade-offs.
 - **Security review:** missed issues have a high cost; the review is read-only, so it's a small share of total tokens.
+- **Principal review:** the same model as the lead, but at `max` effort, so it thinks longer and harder than any other agent. It's used a few times per phase, so the extra cost stays small.
 
 ### 2.3 Why Opus agents use `model: inherit`
 
-They run on the same model as the lead. Start the lead on Opus 5.5 and these agents get exactly Opus 5.5, without depending on what the `opus` alias points to on a given account. If you ever run the lead on another model, change these four files to an explicit model.
+They run on the same model as the lead. Start the lead on Opus 5.5 and these agents get exactly Opus 5.5, without depending on what the `opus` alias points to on a given account. If you ever run the lead on another model, change these five files to an explicit model.
 
 ---
 
@@ -129,7 +128,7 @@ The lead owns the outcome. The product owner reviews exactly two things: the **p
 6. **Review every change.** `code-reviewer` reviews every diff. `security-reviewer` also reviews anything touching auth, permissions, supplier data, webhooks, uploads, secrets or infra exposure.
 7. **Verify.** `test-runner` runs the full suite and returns a digest. `qa-engineer` fills missing tests and checks acceptance criteria end to end.
 8. **Gate.** The lead runs the `phase-gate` skill:
-   - `principal-reviewer` (Fable 5.1) checks each acceptance criterion with evidence and looks for costly design problems;
+   - `principal-reviewer` (Opus 5.5, max effort) checks each acceptance criterion with evidence and looks for costly design problems;
    - `security-reviewer` does a full pass;
    - UI surfaces get an impeccable `audit` and `polish`.
 9. **Demo.** `docs-writer` writes `docs/demos/phase-N.md`. The lead merges to `main`, and Argo CD deploys to staging.
@@ -164,7 +163,7 @@ When an agent fails a task (tests still red, reviewer rejects twice):
 
 1. The lead clarifies the task and retries with the same agent at higher effort.
 2. The task moves up one model tier (Haiku → Sonnet 5 → Opus 5.5).
-3. `principal-reviewer` (Fable 5.1) diagnoses the root cause; the fix goes back to an implementer.
+3. `principal-reviewer` (Opus 5.5, max effort) diagnoses the root cause; the fix goes back to an implementer.
 4. The lead writes up the blocker for the product owner.
 
 ---
@@ -194,7 +193,7 @@ Keep 3–5 build streams running at once. More streams mean more merge conflicts
 - **Delegate reading.** Ask `codebase-explorer` "where is X / which files use Y" instead of reading many files in the lead's context. Ask `test-runner` for a digest instead of running suites directly.
 - **Batch mechanical work.** Translations, seed data and docs go to the cheaper agents in large batches with a clear spec.
 - **Specs up front.** Give each implementer the full task (acceptance criteria, contracts, files to touch) in one message. Clear specs let Sonnet 5 finish in one pass, which is cheaper than an Opus agent guessing.
-- **Fable 5.1 only at gates.** One review per phase plus rare escalations. If it's being called more often, tasks are under-specified.
+- **Principal reviews only at gates.** `principal-reviewer` runs at `max` effort, the most expensive setting on the team. One review per phase plus rare escalations. If it's being called more often, tasks are under-specified.
 - **Measure.** Record per phase: tasks per agent, first-pass success rate, and escalations. If an agent's first-pass rate is below about 70%, raise its effort; if that doesn't help, move its tasks up a tier.
 - **Parallel worktrees** save wall-clock time on independent streams; the price is merge effort, so keep contracts stable.
 

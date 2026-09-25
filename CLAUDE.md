@@ -25,7 +25,7 @@ Ask for approval in one message using the plan-review or design-review format be
 - Run independent implementation tasks in parallel, each in its own worktree.
 - Every change is reviewed by `code-reviewer` before merge. Changes to auth, permissions, supplier data, webhooks, uploads, secrets or infra exposure also get `security-reviewer`.
 - Use `codebase-explorer` for searching and `test-runner` for running suites, so your own context stays small.
-- Use `principal-reviewer` (Fable 5.1, the most expensive agent) only at phase gates, for hard-to-reverse decisions, and after an agent has failed twice.
+- Use `principal-reviewer` (Opus 5.5 at max effort, the most expensive agent) only at phase gates, for hard-to-reverse decisions, and after an agent has failed twice.
 - Follow the escalation ladder in `docs/AGENTS.md` §3 when a task fails. For bugs and failing tests, agents use the `systematic-debugging` skill.
 - Close each phase with the `phase-gate` skill.
 
