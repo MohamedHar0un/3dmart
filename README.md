@@ -4,6 +4,8 @@ Concept work for a 3D interactive FMCG shopping app: shoppers walk a virtual sup
 
 Build brief for the full platform (business goals, architecture, data model, infra, phases): [`docs/BRIEF.md`](docs/BRIEF.md).
 
+Agent team for the build (Opus 5.5 as lead, 17 subagents with assigned models): [`docs/AGENTS.md`](docs/AGENTS.md), definitions in `.claude/agents/`.
+
 Live, clickable design canvas: https://claude.ai/artifact/TVAA4Zu3sAkqNyyyxDVDvr (private until shared).
 
 ## What's in `design/canvas`
