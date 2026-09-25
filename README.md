@@ -2,6 +2,8 @@
 
 Concept work for a 3D interactive FMCG shopping app: shoppers walk a virtual supermarket aisle, pick products off the shelf and check out, while suppliers manage stock, shelf placement, promotions and in-store ads.
 
+Build brief for the full platform (business goals, architecture, data model, infra, phases): [`docs/BRIEF.md`](docs/BRIEF.md).
+
 Live, clickable design canvas: https://claude.ai/artifact/TVAA4Zu3sAkqNyyyxDVDvr (private until shared).
 
 ## What's in `design/canvas`
