@@ -54,7 +54,8 @@ The platform has a second customer: **FMCG suppliers and brands**. They get a po
 1. Product margin or commission on each sale.
 2. Delivery fees, with free delivery above a basket threshold.
 3. **Retail media**: paid placements inside the 3D store and in search. This is the strategic differentiator; treat its tracking and reporting as first-class.
-4. Supplier analytics subscription tiers (later phase).
+4. **Paid 3D services for suppliers** (§9.2): AI conversion and artist modelling, bought with model credits. The standard photo → 3D conversion stays free so every supplier can get on the shelves.
+5. Supplier analytics subscription tiers (later phase).
 
 ### 1.5 Launch scope
 
@@ -119,7 +120,7 @@ Things the RFP doesn't mention but the build must handle:
   - catalog, planograms, delivery zones and slots, promotions;
   - refunds, COD reconciliation, settings, roles, audit log.
 - **Staff app** (Flutter, second flavor of the same codebase): picker and rider modes.
-- **Photo → 3D pipeline** (n8n + services), §9.
+- **Photo → 3D pipeline** (n8n + services), §9: the free Standard tier (no AI), plus the paid AI conversion and artist modelling tiers with model credits.
 - **Infrastructure** (§10):
   - Kubernetes on Contabo VPS nodes;
   - Cloudflare in front (DNS, proxy, WAF, Tunnel);
@@ -129,7 +130,7 @@ Things the RFP doesn't mention but the build must handle:
 ### 2.2 Out of scope for MVP (design for, don't build)
 
 - Partner supermarkets as extra fulfilment locations (keep inventory per location).
-- Supplier self-serve billing for subscriptions.
+- Supplier self-serve billing for subscriptions. (Buying model credits for paid 3D services **is** in scope, §9.2.)
 - Loyalty points, wallet, referrals.
 - AR ("see it on your table"): the GLB assets already make this possible later.
 - Customer support chat. Link to WhatsApp for now.
@@ -158,7 +159,7 @@ Things the RFP doesn't mention but the build must handle:
                                                                │  └─ monitoring: Prometheus, Grafana,│
                                                                │     Loki, Alertmanager              │
                                                                └─────────────────────────────────────┘
-     External: Paymob · Fawry · SMS gateway · FCM/APNs · Google Maps · email · GPU inference (3D) · Sentry
+     External: Paymob · Fawry · SMS gateway · FCM/APNs · Google Maps · email · Sentry · GPU inference (paid AI tier only)
      Storage:  R2 buckets (public, private, backups)
 ```
 
@@ -174,8 +175,8 @@ This keeps domain logic in one place.
 **Default:** a single Laravel app with clear domain modules (§5.2), not microservices. The only separate services are:
 
 - n8n, for workflow orchestration;
-- `mesh-builder`, a small service that builds and optimizes 3D models (Node.js, because the glTF tooling lives there);
-- the GPU inference endpoint, which is external.
+- `mesh-builder`, a small service that cleans photos (OpenCV), builds and optimizes 3D models (Node.js for the glTF tooling, with a Python OpenCV worker if cleaner);
+- the GPU inference endpoint, which is external and used only by the paid AI tier.
 
 ---
 
@@ -352,7 +353,10 @@ Not exhaustive; Claude designs the full schema in Phase 0–1 and records it as 
   - `facings` (slot × variant, count, depth);
   - `planogram_versions`: draft → submitted → approved → **published**. The published version is an immutable JSON snapshot on R2 (§7.2).
 - **3D assets:**
-  - `model_jobs`: pipeline runs, status, cost, logs link;
+  - `model_jobs`: pipeline runs, tier (`standard | ai | artist`), status, provider cost, credits reserved/captured, logs link;
+  - `model_credit_ledger`: append-only (purchase, grant, reserve, capture, release, refund, expiry) per supplier;
+  - `credit_packs`: admin-defined packs and prices;
+  - `artist_quotes`, `artist_assignments`;
   - `models_3d`: variant, GLB URLs per LOD, KTX2 texture set, bounding box, triangle count, status `draft | review | approved | rejected`.
 - **Cart and checkout:**
   - `carts`, `cart_items`;
@@ -528,78 +532,173 @@ Write templates in Arabic and English. Put a `Notifier` abstraction in front of 
 
 ## 9. Photo → 3D pipeline (n8n)
 
-### 9.1 Goal
+### 9.1 Goal and tiers
 
-A supplier uploads real photos of a pack. Within minutes, the platform produces a correctly sized, optimized 3D model that looks like the real pack. A human approves it, and it goes on the shelves.
+A supplier uploads real photos of a pack. The platform produces a correctly sized, optimized 3D model that looks like the real pack. A person approves it, and it goes on the shelves.
 
-### 9.2 Inputs
+There are three tiers. Only the first is free.
 
-- Photos with roles: front and back required; left, right, top and bottom recommended. White or plain background preferred. The upload UI shows a guide.
-- Physical dimensions in mm (required) and the pack shape (suggested by AI, confirmed by the supplier).
-- Uploads go **directly to R2** with presigned PUT URLs (the private bucket). They never pass through Laravel or Cloudflare's request-size limits.
+| Tier | Who pays | What it does | Uses AI? |
+|---|---|---|---|
+| **Standard** (included) | Free for every supplier | Classic image processing + parametric pack shapes (§9.4). Covers boxes, cartons, cans, jars, bottles, jugs, bags and pouches shot to the photo standard (§9.3). | No |
+| **AI conversion** (paid add-on) | Supplier, per model | Everything in Standard, plus AI steps that cope with messy photos (busy backgrounds, angled shots), read label text automatically, and build models for irregular shapes (§9.5). | Yes |
+| **Artist modelling** (paid add-on) | Supplier, per model, quoted | A 3D artist models the product by hand in Blender from the supplier's photos (§9.6). For hero products, odd shapes, or anything the other tiers can't do well. | No |
 
-### 9.3 Approach
+**Default:** the Standard tier is the default everywhere. The AI tier is built behind a feature flag (Laravel Pennant, `ai-3d-conversion`) and switched on only once D7 is settled.
 
-Most FMCG packs are simple geometric shapes, so there are two paths.
+### 9.2 Paying for add-ons
 
-**Path A: parametric (default, fast, cheap, most reliable).** Used for box, carton, can, jar, bottle, jug, bag and pouch. The `mesh-builder` service:
-1. builds the shape from the real dimensions (the prototype's geometry is the starting point: gable-top cartons, puffed bags with crimped seals, lathe-profile bottles and jugs, cans with lids);
-2. **projects the cleaned photos onto the matching faces as textures**: front and back on the main faces, sides on the sides; cylinders get a wrap made by stitching the front, sides and back.
+- **Model credits.** Suppliers buy credit packs in the supplier portal.
+  - An AI conversion costs a set number of credits.
+  - Artist modelling is quoted per product by an admin, then accepted by the supplier and paid in credits or on invoice.
+  - Prices are admin settings, not code. **Ask (D15)** for prices; use `[EGP per credit]` placeholders until then.
+- **Buying credits:**
+  - by card or wallet through Paymob (the same `PaymentGateway` as shopper payments, with a separate merchant integration if Paymob requires one);
+  - or granted by a finance admin against a bank transfer or invoice.
 
-**Path B: AI image-to-3D (fallback).** Used for irregular packs (odd bottles, toys, blister packs) or when Path A's quality check fails. Call an image-to-3D model on a GPU endpoint. Contabo VPS nodes have no GPUs, so inference runs on a serverless GPU provider or through a commercial API.
+  Either way, every change goes through an append-only `model_credit_ledger`: purchase, grant, reserve, capture, release, refund, expiry. The balance is the sum of the ledger, never a mutable number.
+- **Charging rules** (fair and predictable for suppliers):
+  1. **Reserve** credits when an AI job starts.
+  2. **Capture** them only when the job delivers a model that passes the automatic checks.
+  3. **Release** them if the pipeline fails or times out.
+  4. **One free retry** if the supplier rejects the result for quality.
+  5. Artist jobs are captured on the supplier's acceptance of the finished model.
+- **Upsell moments in the portal:**
+  - when a Standard job fails its checks, offer AI conversion or artist modelling for that product, showing the price;
+  - when the supplier picks shape `other`, explain that Standard can't build it and show the two paid options.
+- **Cost tracking:** record each job's actual provider cost (GPU time or API fee) next to what the supplier paid, and show the margin in the admin finance area.
+- **Invoicing:** credit purchases produce invoices through the same `InvoiceIssuer` interface as orders (§1.7).
 
-Candidates (**Ask D7** before committing; check each licence for commercial use in Egypt):
-- Microsoft TRELLIS (MIT licence);
-- Tencent Hunyuan3D 2.x: its community licence has territory restrictions, so check them;
-- Stability AI Stable Fast 3D (Stability Community Licence has a revenue threshold);
-- a commercial API (e.g., Meshy, Tripo, Rodin).
+### 9.3 Photo standard (makes Standard reliable)
 
-Put an `ImageTo3D` interface in `mesh-builder` so providers can be swapped. Record per-job cost.
+Show this as a guided upload screen with example photos. It's also a printable one-page guide suppliers can give their photographer.
 
-### 9.4 The n8n workflow
+- **Backdrop:** plain white (or chroma green) sweep or a cheap lightbox, even light, no hard shadows.
+- **Colour:** a small grey or colour reference card in one extra shot, used for white balance.
+- **Camera:** phone camera is fine; fixed distance; the pack fills most of the frame; short side ≥ 1500 px.
+- **Boxes, cartons, bags, pouches:** front, back, left, right, top, bottom, each shot straight on.
+- **Cans, jars, bottles, jugs:** front and back, plus **a 10–20 second video on a turntable** (a cheap manual turntable is enough) for the wrap-around label.
+- **Transparent packs** (water, oil): shoot with the product inside, against white. The body colour and transparency come from the shape settings, not the photo.
 
-Workflow `product-photo-to-3d`, exported to `workflows/n8n/`:
+The upload screen checks basic quality right away:
+- resolution;
+- blur (variance of the Laplacian);
+- over-exposure;
+- whether the background is plain enough.
 
-1. **Trigger:** Laravel calls an n8n webhook with `{job_id, variant_id, photos: [{role, presigned_get_url}], dims_mm, shape_hint, callback_url}`. The request is HMAC-signed with a shared secret; n8n verifies it first.
-2. **Validate:**
-   - required photos present;
-   - image sizes ≥ 1000 px on the short side;
-   - dimensions sane for the shape.
+It then tells the supplier what to reshoot before anything is queued.
 
-   On failure, call back `needs_input` with reasons shown to the supplier.
-3. **Background removal:** a segmentation model on the GPU endpoint (e.g., BiRefNet or rembg) or an API. Crop to the pack.
-4. **Understand the pack:** send the front and back photos to a vision-capable Claude model (Anthropic API) to:
-   - classify the shape;
-   - read the brand, product name and size in Arabic and English, which pre-fills catalog fields for the supplier to confirm;
-   - check the photos match the declared product;
-   - flag problems (blurry photo, glare, wrong side).
-5. **Branch:** Path A (`mesh-builder /parametric`) or Path B (`mesh-builder /image-to-3d`, which calls the GPU provider).
-6. **Post-process** (`mesh-builder /optimize`, using glTF-Transform):
-   - scale to the exact dimensions;
-   - centre the pivot at the base, front facing +Z (the engine's convention);
-   - generate LOD0/1/2;
-   - Meshopt-compress;
-   - convert textures to KTX2;
-   - render a transparent PNG thumbnail and a 360° turntable preview.
-7. **Automatic quality checks:**
+### 9.4 Standard pipeline (no AI)
+
+Runs entirely on our cluster, on CPU; no GPU and no external model.
+
+**Inputs:**
+- photos and video;
+- physical dimensions in mm (required);
+- pack shape, chosen by the supplier from a list with pictures;
+- name, brand and size, typed or confirmed by the supplier (they already enter these in the catalog).
+
+Uploads go **directly to R2** with presigned PUT URLs (the private bucket). They never pass through Laravel or Cloudflare's request-size limits.
+
+**Steps** in `services/mesh-builder`. Add a Python worker alongside it for the OpenCV work if that's cleaner, and record the choice in an ADR.
+
+1. **Background removal:**
+   - colour-threshold against the plain backdrop, in HSV or Lab colour space;
+   - morphological clean-up;
+   - keep the largest contour;
+   - optional GrabCut refinement on the edge band.
+2. **Straighten flat faces:**
+   - find the face's four corners (contour → polygon approximation);
+   - apply a perspective (homography) warp to a rectangle with the exact aspect ratio of the declared dimensions.
+3. **Unwrap cylinders** from the turntable video:
+   - take one frame every few degrees;
+   - cut a thin vertical strip from the centre of each;
+   - blend them into one wrap-around label (a strip-scan panorama);
+   - match its width to the circumference from the declared diameter.
+4. **Colour:** white-balance from the backdrop or reference card; mild denoise and sharpen.
+5. **Build the mesh:** the parametric shape for the chosen type and exact dimensions. The prototype's geometry is the starting point:
+   - gable-top cartons;
+   - puffed bags with crimped seals;
+   - lathe-profile bottles and jugs;
+   - cans with lids;
+   - jars.
+
+   Map the textures onto the matching faces; the cylinder wrap goes around the body.
+6. **Optimize** (glTF-Transform):
+   - pivot at the base centre, front facing +Z (the engine's convention);
+   - LOD0/1/2;
+   - Meshopt compression;
+   - KTX2 textures;
+   - a transparent PNG thumbnail and a 360° turntable preview.
+7. **Automatic checks:**
    - bounding box within ±3% of the declared dimensions;
    - triangle and texture budgets (§7.4);
-   - no missing textures;
-   - front-face colour histogram close to the front photo.
-8. **Upload** the results to R2 (public bucket, content-hashed paths).
-9. **Callback** to Laravel with an HMAC-signed payload: status, file URLs, metrics, cost, warnings. Laravel sets the model to `review` and notifies the supplier and catalog admins.
-10. **Human review** in the portal with a 3D viewer (the same aisle-engine viewer component):
-    - approve → the model is attached to the variant and used by the next planogram publish;
-    - reject with a reason → the supplier re-uploads.
+   - no missing faces or textures;
+   - front texture compared with the front photo by colour histogram and a structural-similarity (SSIM) score.
+8. **Result:**
+   - upload to R2 (public bucket, content-hashed paths);
+   - Laravel sets the model to `review`;
+   - a person approves or rejects it in the portal's 3D viewer. That review also covers what an AI would have caught: wrong side, blurry label, wrong product.
 
-**Operations:**
+**If a Standard job fails its checks,** the supplier sees exactly why, e.g., "background not plain enough on the left photo", "front face corners not found". They can reshoot for free, or buy AI conversion or artist modelling (§9.2).
+
+### 9.5 AI conversion (paid, optional)
+
+Only runs when the flag is on, the supplier has enough credits, and they chose it.
+
+It reuses the Standard steps and swaps in AI where Standard is weak:
+
+- **Background removal** with a segmentation model (e.g., BiRefNet or rembg), so busy backgrounds work.
+- **Pack understanding:** a vision-capable Claude model (Anthropic API) that:
+  - suggests the shape;
+  - reads the brand, product name and size in Arabic and English, pre-filling catalog fields for the supplier to confirm;
+  - flags photo problems.
+- **Irregular shapes** (shape `other`, or when Standard fails): an image-to-3D model on a rented GPU endpoint, since the Contabo nodes have no GPUs. Candidates (**Ask D7**; check each licence for commercial use in Egypt):
+  - Microsoft TRELLIS (MIT licence);
+  - Tencent Hunyuan3D 2.x (community licence with territory restrictions);
+  - Stability AI Stable Fast 3D (Stability Community Licence, with a revenue threshold);
+  - a commercial API such as Meshy, Tripo or Rodin.
+
+  Put all of them behind an `ImageTo3D` interface so the provider can be swapped.
+- **Also offered for irregular shapes: photogrammetry** (COLMAP + OpenMVS, or Meshroom). It's classic computer vision rather than AI, but it's expensive to run, so it sits in the paid tier.
+  - It needs 30–80 photos taken around the object.
+  - It struggles with shiny, transparent or plain single-colour surfaces.
+  - Dense reconstruction is only practical on a GPU.
+
+  Choose between photogrammetry and image-to-3D per job, based on the photos provided.
+
+The output goes through the same optimize → checks → review steps as Standard.
+
+### 9.6 Artist modelling (paid)
+
+- The supplier requests it for a product; an admin sends a quote; the supplier accepts in the portal; credits are reserved.
+- The job appears in an admin "Artist queue", where artists download the photos and dimensions, then upload the finished GLB or `.blend` file.
+- Uploads go through the same optimize and automatic checks, then supplier review. Two revision rounds are included.
+- Artists can be staff or freelancers with an `artist` role that only sees assigned jobs.
+
+### 9.7 The n8n workflows
+
+Export all of these to `workflows/n8n/`.
+
+- **`product-photo-to-3d-standard`:**
+  1. HMAC-verified webhook from Laravel with `{job_id, variant_id, tier, photos: [{role, presigned_get_url}], video_url?, dims_mm, shape, callback_url}`.
+  2. Validate.
+  3. Call `mesh-builder` to clean up the images.
+  4. Call `mesh-builder` to build the mesh, then optimize it.
+  5. Run the checks.
+  6. Upload to R2.
+  7. Send an HMAC-signed callback: status, file URLs, metrics, warnings.
+- **`product-photo-to-3d-ai`:** same shape, with AI nodes in place of or in addition to the Standard steps. It records the provider cost in the callback so Laravel can capture or release credits.
+- **`artist-job-notify`:** notifies artists and admins on quote, acceptance, delivery and revisions.
+
+**How they run:**
 - Retries with backoff on every external step.
-- A dead-letter path that reports failures back to Laravel.
+- A dead-letter path reports failures back to Laravel, which releases any reserved credits.
 - Per-supplier concurrency limits.
 - A dashboard of job counts, durations and cost.
-- n8n credentials live in Kubernetes secrets, never in the exported JSON.
+- Credentials live in Kubernetes secrets, never in the exported JSON.
 
-### 9.5 n8n deployment
+### 9.8 n8n deployment
 
 - Queue mode: `main` (editor, restricted to admins behind Cloudflare Access), `webhook` pods, and `worker` pods.
 - Its own database on the Postgres cluster, and Redis for its queue.
@@ -801,7 +900,8 @@ Three areas in the same app, each with its own layout, navigation and route pref
   - promotions;
   - shelf planner, which proposes changes that go to admin approval;
   - retail media: bookings, creatives, campaign results;
-  - 3D models: upload photos, see job status, review in the 3D viewer;
+  - 3D models: guided photo upload with instant quality feedback, job status, review in the 3D viewer;
+  - model credits: balance, buy packs (Paymob), history, invoices; choose AI conversion or request an artist quote per product;
   - team and permissions;
   - documents.
 - **Admin portal** (`admin.`): everything in the Version 1 admin board, plus:
@@ -835,7 +935,7 @@ Each phase ends with its acceptance criteria met, CI green, deployed to staging,
 | **3: 3D store** | Planogram model and editor; publish → manifests on R2; aisle-engine (walking, look, pick-up, put back, add to cart, price tags, signage); WebView integration; analytics events (partitioned) | The performance gate in §7.3 passes on the reference devices, with numbers recorded in an ADR; an item added in 3D shows in the cart with the correct server price; the automatic list-view fallback works |
 | **4: Payments & delivery** | Paymob and Fawry (sandbox → production), refunds; staff app (picking with barcode scan, rider jobs, COD collection); live tracking over Reverb; notifications (push, SMS, email) | All three payment methods succeed and fail correctly in sandbox, including duplicate and out-of-order webhooks; a rider's position updates on the shopper's map within 10 s; COD reconciliation balances in a test shift |
 | **5: Suppliers & retail media** | Supplier portal complete; promotions v2 (BxGy, bundle, supplier-funded); retail media: placements, bookings (exclusion constraints), creatives, approvals, in-scene rendering, event tracking, attribution, reporting | Two suppliers can't see each other's data (automated tests on every supplier endpoint); overlapping bookings are rejected by the database; campaign report numbers match raw events |
-| **6: Photo → 3D** | mesh-builder (parametric + optimize + thumbnails); n8n workflow; GPU provider integration; review UI; cost tracking | 20 real packs across all shapes go from photos to approved models; ≥ 90% of standard-shape packs pass automatic checks first time; per-model median processing time and cost recorded |
+| **6: Photo → 3D** | Photo standard and guided upload with instant checks; mesh-builder Standard tier (OpenCV clean-up, face straightening, cylinder unwrap, parametric meshes, optimize, thumbnails); n8n Standard workflow; review UI; model credits (ledger, packs, Paymob purchase, admin grants, invoices); artist queue and quotes; AI tier behind the `ai-3d-conversion` flag with the `ImageTo3D` interface and one provider | 20 real packs across all standard shapes, shot to the photo standard, go from photos to approved models with **no AI**; ≥ 90% pass automatic checks first time; credits reserve, capture and release correctly in every path, including failures and the free retry (tests); an artist job runs end to end; median processing time recorded |
 | **7: Hardening & launch** | Load tests (k6) at 3× expected peak; security review and fixes; pgaudit; data export and deletion flows; e-receipt hook (D2); runbooks; store listings | Load test meets the §15 targets; no high or critical findings open; restore drill passes; apps approved in both stores |
 
 ---
@@ -867,7 +967,7 @@ Build to the defaults until these are answered.
 | D4 | Target reference devices | A mid-range 4 GB Android + a recent iPhone |
 | D5 | Paymob and Fawry merchant accounts | Build against sandboxes |
 | D6 | SMS provider | Driver interface + log driver |
-| D7 | Image-to-3D provider(s) and licence approval | Parametric path first; provider interface ready |
+| D7 | AI tier: which image-to-3D / photogrammetry / segmentation providers, and licence approval | Standard (no AI) tier only; AI tier built behind a feature flag with the provider interface |
 | D8 | Contabo region and node plan | Lowest latency to Cairo, as in §10.1 |
 | D9 | App store accounts and app names | Placeholders: "3D Mart" and "3D Mart Staff" |
 | D10 | Arabic digit style | Western digits, with a setting |
@@ -875,6 +975,7 @@ Build to the defaults until these are answered.
 | D12 | Traffic expectations for launch | As in §15 |
 | D13 | Brand usage: written permission from brands shown in the 3D store and marketing | Only suppliers who have signed up appear in production; demo data uses clearly fictional brands |
 | D14 | Domain name | `3dmart.example` placeholder in config and Terraform variables |
+| D15 | Prices for model credits, AI conversion and artist modelling; whether credits expire | Admin-configurable, placeholder `[EGP per credit]`; credits don't expire |
 
 ---
 
