@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3D Mart proposed approach</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Figtree',system-ui,sans-serif;color:#1A1C19;background:#E9E4D8}
+a{color:#1E6B47}a:hover{color:#14502F}
+.disp{font-family:'Bricolage Grotesque','Figtree',sans-serif}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1000px; box-sizing: border-box; background: #F5F2EA; padding: 48px 56px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between">
+<div>
+<div style="font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #8A3D10">RESPONSE TO RFP · 3D INTERACTIVE FMCG APP</div>
+<h1 class="disp" style="margin: 6px 0 0; font-size: 40px; font-weight: 800">Proposed architecture &amp; roadmap</h1>
+</div>
+<div style="font-size: 14px; color: #5E6259">Draft for discussion · [Your company name]</div>
+</div>
+
+<!-- architecture -->
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr) 36px minmax(0, 1fr) 36px minmax(0, 1fr); align-items: stretch">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #5E6259">APPS</div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px; border: 2px solid {{primary}}"><div style="font-weight: 800">Shopper app</div><div style="font-size: 13px; color: #5E6259; line-height: 1.45">Flutter, iOS &amp; Android. Arabic + English, right-to-left ready.</div></div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px; border: 2px solid {{primary}}"><div style="font-weight: 800">3D aisle module</div><div style="font-size: 13px; color: #5E6259; line-height: 1.45">Unity, embedded with flutter_unity_widget. List-view fallback for low-end phones.</div></div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px"><div style="font-weight: 800">Supplier &amp; admin dashboards</div><div style="font-size: 13px; color: #5E6259; line-height: 1.45">Laravel + Inertia.js + Vue 3, served by the same backend.</div></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: center; color: #A9A597"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h21M17 5l7 7-7 7"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #5E6259">BACKEND</div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px">
+<div style="font-weight: 800">Laravel REST API</div>
+<div style="font-size: 13px; color: #5E6259; line-height: 1.5">Sanctum tokens, SMS OTP and social login<br>Catalog, cart, orders, promotions<br>Planogram service: which product sits on which 3D shelf slot<br>Retail media: bookings, approvals, ad reporting<br>Queues on Horizon for notifications and payment callbacks<br>Reverb websockets for live order tracking</div>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: center; color: #A9A597"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h21M17 5l7 7-7 7"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #5E6259">DATA ON AWS</div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px"><div style="font-weight: 800">MySQL on RDS</div><div style="font-size: 13px; color: #5E6259">Orders, catalog, suppliers</div></div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px"><div style="font-weight: 800">Redis</div><div style="font-size: 13px; color: #5E6259">Cache, queues, sessions</div></div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px"><div style="font-weight: 800">S3 + CloudFront</div><div style="font-size: 13px; color: #5E6259">3D models and textures, streamed per aisle</div></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: center; color: #A9A597"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h21M17 5l7 7-7 7"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #5E6259">INTEGRATIONS</div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 14px; flex-grow: 1; display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<div><b>Paymob</b> <span style="color: #5E6259">cards, Meeza, wallets</span></div>
+<div><b>Fawry</b> <span style="color: #5E6259">reference-code payments</span></div>
+<div><b>SMS provider</b> <span style="color: #5E6259">OTP login</span></div>
+<div><b>Firebase Cloud Messaging</b> <span style="color: #5E6259">push notifications</span></div>
+<div><b>Google Maps</b> <span style="color: #5E6259">addresses, GPS, rider tracking</span></div>
+</div>
+</div>
+</div>
+
+<!-- roadmap -->
+<div style="background: #FFFFFF; border-radius: 18px; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><div style="font-size: 18px; font-weight: 800">Roadmap to MVP launch</div><div style="font-size: 13px; color: #8A3D10; font-weight: 700">Draft estimate: adjust to your team size</div></div>
+<div style="display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 0; font-size: 12px; color: #5E6259">
+<div></div>
+<div style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); border-bottom: 1px solid #E2DDD0; padding-bottom: 4px">
+<div>Wk 1</div><div>Wk 3</div><div>Wk 5</div><div>Wk 7</div><div>Wk 9</div><div>Wk 11</div><div>Wk 13</div><div>Wk 15</div><div>Wk 17</div><div>Wk 19</div>
+</div>
+</div>
+<sc-for list="{{phases}}" as="p" hint-placeholder-count="7">
+<div style="display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: center; height: 30px">
+<div style="font-size: 14px; font-weight: 700">{{p.name}} <span style="font-weight: 500; color: #5E6259">· {{p.len}} wks</span></div>
+<div style="position: relative; height: 30px; background-image: repeating-linear-gradient(90deg, #F0ECE2 0 1px, transparent 1px 10%)">
+<div style="position: absolute; top: 7px; height: 16px; left: {{p.left}}%; width: {{p.width}}%; background: {{p.fill}}; border-radius: 4px"></div>
+</div>
+</div>
+</sc-for>
+</div>
+
+<!-- cost -->
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<div style="background: #FFFFFF; border-radius: 18px; padding: 20px"><div style="font-size: 13px; font-weight: 700; color: #5E6259">MVP build (one-off)</div><div class="disp" style="font-size: 28px; font-weight: 800; margin-top: 6px">[EGP amount]</div><div style="font-size: 13px; color: #5E6259; margin-top: 4px">Apps, 3D aisle module, dashboards, integrations, QA</div></div>
+<div style="background: #FFFFFF; border-radius: 18px; padding: 20px"><div style="font-size: 13px; font-weight: 700; color: #5E6259">Maintenance &amp; support</div><div class="disp" style="font-size: 28px; font-weight: 800; margin-top: 6px">[EGP / month]</div><div style="font-size: 13px; color: #5E6259; margin-top: 4px">Bug fixes, OS updates, new aisles and 3D assets</div></div>
+<div style="background: #FFFFFF; border-radius: 18px; padding: 20px"><div style="font-size: 13px; font-weight: 700; color: #5E6259">Cloud hosting (estimate)</div><div class="disp" style="font-size: 28px; font-weight: 800; margin-top: 6px">[USD / month]</div><div style="font-size: 13px; color: #5E6259; margin-top: 4px">AWS, grows with traffic; billed to the client at cost</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"primary":{"editor":"color","default":"#1E6B47","options":["#1E6B47","#1F4E9C","#7A2E5B","#1A1C19"]},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const primary = this.props.primary ?? '#1E6B47';
+    const TOTAL = 20;
+    const rows = [
+      ['Discovery & UI/UX design', 1, 4],
+      ['3D engine & aisle builder', 3, 12],
+      ['Backend & REST APIs', 4, 13],
+      ['Supplier & admin dashboards', 8, 15],
+      ['Payments, tracking, notifications', 11, 15],
+      ['QA & performance testing on devices', 14, 18],
+      ['Store submission & launch', 18, 20]
+    ];
+    return {
+      primary,
+      phases: rows.map(([name, from, to], i) => ({
+        name, len: to - from + 1,
+        left: ((from - 1) / TOTAL) * 100, width: ((to - from + 1) / TOTAL) * 100,
+        fill: i === rows.length - 1 ? '#B4531B' : primary
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

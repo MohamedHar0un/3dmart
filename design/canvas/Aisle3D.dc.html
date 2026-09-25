@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3D Mart realistic aisle</title>
+<script src="./support.js"></script>
+<script src="/_blob/884ce8ada45087fb46419f70cc4add15"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Figtree:wght@500;600;700;800;900&amp;family=IBM+Plex+Sans+Arabic:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Figtree','IBM Plex Sans Arabic',system-ui,sans-serif;color:#1A1C19;background:#1A1C19}
+a{color:#1E6B47}a:hover{color:#14502F}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px;box-shadow:0 0 0 4px #1E6B47}
+.disp{font-family:'Bricolage Grotesque','IBM Plex Sans Arabic','Figtree',sans-serif}
+.noscroll{scrollbar-width:none}.noscroll::-webkit-scrollbar{display:none}
+@keyframes rise{from{transform:translateY(80px);opacity:0}to{transform:none;opacity:1}}
+.sheet{animation:rise .3s ease-out}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EFEBE4">
+<canvas data-aisle="1" ref="{{sceneRef}}" onPointerDown="{{onDown}}" onPointerMove="{{onMove}}" onPointerUp="{{onUp}}" onPointerCancel="{{onUp}}" onWheel="{{onWheel}}" aria-label="3D supermarket aisle. Drag to look around, use the walk buttons to move, tap a product to pick it up." style="position: absolute; left: 0px; top: 0px; width: 390px; height: 844px; display: block; touch-action: none; cursor: grab"></canvas>
+
+<!-- top HUD -->
+<div style="position: absolute; left: 0; top: 0; width: 390px; box-sizing: border-box; padding: 14px 12px 0; display: flex; flex-direction: column; gap: 8px; pointer-events: none">
+<div style="display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 999px; background: rgba(255,255,255,.94); box-shadow: 0 2px 10px rgba(0,0,0,.12); pointer-events: auto">
+<div style="width: 30px; height: 30px; border-radius: 9px; background: #1E6B47; color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg></div>
+<div style="flex-grow: 1; min-width: 0; line-height: 1.15">
+<div style="font-size: 12px; font-weight: 700; color: #5E6259">Aisle 4 · Section {{sectionNo}} of 5</div>
+<div style="font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{sectionName}} <span style="font-weight: 600; color: #5E6259">· {{sectionAr}}</span></div>
+</div>
+<button onClick="{{cartTap}}" aria-label="{{cartAria}}" style="position: relative; height: 40px; padding: 0 14px; border-radius: 999px; border: 0; background: #1A1C19; color: #FFFFFF; font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 6px; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"></path><circle cx="9" cy="20" r="1.4"></circle><circle cx="17" cy="20" r="1.4"></circle></svg>{{cartCount}}</button>
+</div>
+<div class="noscroll" style="display: flex; gap: 6px; overflow-x: auto; pointer-events: auto; padding-bottom: 2px">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+<button onClick="{{c.pick}}" aria-pressed="{{c.aria}}" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 0; background: {{c.bg}}; color: {{c.fg}}; font-size: 13px; font-weight: 700; box-shadow: 0 1px 6px rgba(0,0,0,.12)">{{c.name}}</button>
+</sc-for>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; position: relative; height: 6px; margin: 0 4px">
+<sc-for list="{{segments}}" as="g" hint-placeholder-count="5"><div style="height: 6px; border-radius: 3px; background: {{g.bg}}"></div></sc-for>
+<div style="position: absolute; top: -4px; left: {{progress}}%; width: 14px; height: 14px; margin-left: -7px; border-radius: 999px; background: #FFFFFF; border: 3px solid #1E6B47; box-sizing: border-box; transition: left .2s"></div>
+</div>
+</div>
+
+<!-- bottom controls -->
+<sc-if value="{{showControls}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 0; bottom: 0; width: 390px; box-sizing: border-box; padding: 0 14px 22px; display: flex; align-items: flex-end; gap: 10px; pointer-events: none">
+<div style="display: flex; flex-direction: column; gap: 8px; pointer-events: auto">
+<button onPointerDown="{{fwdDown}}" onPointerUp="{{walkStop}}" onPointerLeave="{{walkStop}}" onPointerCancel="{{walkStop}}" onClick="{{fwdClick}}" aria-label="Walk forward (hold)" style="width: 64px; height: 64px; border-radius: 999px; border: 0; background: #1E6B47; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.25); touch-action: none"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></button>
+<button onPointerDown="{{backDown}}" onPointerUp="{{walkStop}}" onPointerLeave="{{walkStop}}" onPointerCancel="{{walkStop}}" onClick="{{backClick}}" aria-label="Step back (hold)" style="width: 64px; height: 52px; border-radius: 999px; border: 0; background: rgba(255,255,255,.94); color: #1A1C19; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.18); touch-action: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"></path></svg></button>
+</div>
+<div style="flex-grow: 1; display: flex; justify-content: center; padding-bottom: 8px">
+<div style="padding: 8px 12px; border-radius: 14px; background: rgba(26,28,25,.82); color: #FFFFFF; font-size: 12px; font-weight: 600; line-height: 1.4; text-align: center; max-width: 190px">{{hint}}</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; pointer-events: auto">
+<button onClick="{{lookLeft}}" aria-label="Look at the left shelf" style="width: 52px; height: 52px; border-radius: 999px; border: 0; background: rgba(255,255,255,.94); color: #1A1C19; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.18)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 5 5v6"></path></svg></button>
+<button onClick="{{lookAhead}}" aria-label="Look down the aisle" style="width: 52px; height: 52px; border-radius: 999px; border: 0; background: rgba(255,255,255,.94); color: #1A1C19; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.18)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path></svg></button>
+<button onClick="{{lookRight}}" aria-label="Look at the right shelf" style="width: 52px; height: 52px; border-radius: 999px; border: 0; background: rgba(255,255,255,.94); color: #1A1C19; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.18)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"></path><path d="M20 9H9a5 5 0 0 0-5 5v6"></path></svg></button>
+</div>
+</div>
+</sc-if>
+
+<!-- product sheet -->
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 50%; bottom: 330px; transform: translateX(-50%); padding: 7px 12px; border-radius: 999px; background: rgba(26,28,25,.82); color: #FFFFFF; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none">Drag to turn it · scroll to bring it closer</div>
+<div class="sheet" style="position: absolute; left: 0; bottom: 0; width: 390px; height: 316px; box-sizing: border-box; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 10px 18px 22px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -6px 24px rgba(0,0,0,.18)">
+<div style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: #D8D2C3"></div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #5E6259">{{sel.brandUp}}</span>
+<sc-if value="{{sel.promo}}" hint-placeholder-val="{{false}}"><span style="padding: 3px 8px; border-radius: 6px; background: #FFE08A; color: #6E300B; font-size: 11px; font-weight: 800">OFFER</span></sc-if>
+<span style="padding: 3px 8px; border-radius: 6px; background: #D6EBDD; color: #14502F; font-size: 11px; font-weight: 800">IN STOCK</span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+<div style="min-width: 0">
+<div class="disp" style="font-size: 23px; font-weight: 800; line-height: 1.1">{{sel.name}}</div>
+<div dir="rtl" lang="ar" style="font-size: 17px; font-weight: 600; color: #5E6259; margin-top: 2px; text-align: left">{{sel.brandAr}} · {{sel.nameAr}}</div>
+<div style="font-size: 14px; color: #5E6259; margin-top: 4px">{{sel.size}} · Aisle 4, {{sel.shelf}}</div>
+</div>
+<div style="text-align: right; flex-shrink: 0"><div class="disp" style="font-size: 24px; font-weight: 800">EGP {{sel.price}}</div><div style="font-size: 12px; color: #5E6259">sample price</div></div>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; gap: 10px; align-items: center">
+<div style="display: flex; align-items: center; gap: 4px; background: #F5F2EA; border-radius: 999px; padding: 4px">
+<button onClick="{{qtyDec}}" aria-label="Decrease quantity" style="width: 44px; height: 44px; border-radius: 999px; border: 0; background: #FFFFFF; color: #1A1C19; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+<div style="width: 26px; text-align: center; font-size: 17px; font-weight: 800">{{qty}}</div>
+<button onClick="{{qtyInc}}" aria-label="Increase quantity" style="width: 44px; height: 44px; border-radius: 999px; border: 0; background: #FFFFFF; color: #1A1C19; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<button onClick="{{addCart}}" style="flex-grow: 1; height: 56px; border: 0; border-radius: 999px; background: #1E6B47; color: #FFFFFF; font-size: 16px; font-weight: 800">Add to cart · EGP {{lineTotal}}</button>
+</div>
+<button onClick="{{putBack}}" style="height: 40px; border: 0; background: transparent; color: #1E6B47; font-size: 15px; font-weight: 700">Put it back on the shelf</button>
+</div>
+</sc-if>
+
+<!-- loading / failure -->
+<sc-if value="{{loading}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; background: #EFEBE4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px">
+<div class="pulse" style="width: 64px; height: 64px; border-radius: 18px; background: #1E6B47; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg></div>
+<div style="font-size: 16px; font-weight: 800">Stocking the shelves…</div>
+<div dir="rtl" lang="ar" style="font-size: 14px; color: #5E6259">جاري ترتيب الرفوف…</div>
+</div>
+</sc-if>
+<sc-if value="{{failed}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 24px; right: 24px; top: 320px; padding: 20px; border-radius: 20px; background: #FFFFFF; text-align: center; font-size: 15px; line-height: 1.5; box-shadow: 0 6px 24px rgba(0,0,0,.18)"><b>3D isn’t available on this device.</b><br>The app would switch to the list view here (see Version 1).</div>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 50%; top: 150px; transform: translateX(-50%); padding: 11px 16px; border-radius: 999px; background: #1A1C19; color: #FFFFFF; font-size: 14px; font-weight: 600; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.25)">{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  sections() {
+    return [
+      { name: 'Milk & Juice', ar: 'الألبان والعصائر', color: '#1F4E9C' },
+      { name: 'Snacks', ar: 'سناكس', color: '#C8102E' },
+      { name: 'Drinks, Tea & Coffee', ar: 'مشروبات وشاي وقهوة', color: '#0B6E3A' },
+      { name: 'Pantry', ar: 'البقالة', color: '#B4531B' },
+      { name: 'Household', ar: 'المنظفات', color: '#5B2A86' }
+    ];
+  }
+
+  products() {
+    return [
+      { id: 'juh_milk', sec: 0, brand: 'Juhayna', brandAr: 'جهينة', name: 'Full Cream Milk', nameAr: 'لبن كامل الدسم', size: '1 L', price: 46, shape: 'carton', dim: [0.075, 0.2, 0.075], bg: '#FFFFFF', accent: '#0A5AA8', accent2: '#6CB33F', text: '#0A3D7A', onAccent: '#FFFFFF' },
+      { id: 'juh_mango', sec: 0, brand: 'Juhayna Pure', brandAr: 'جهينة بيور', name: 'Mango Juice', nameAr: 'عصير مانجو', size: '1 L', price: 52, shape: 'carton', dim: [0.075, 0.2, 0.075], bg: '#FFB81C', accent: '#2E8540', text: '#7A2E00', onAccent: '#FFFFFF', promo: true },
+      { id: 'beyti', sec: 0, brand: 'Beyti', brandAr: 'بيتي', name: 'Full Cream Milk', nameAr: 'لبن كامل الدسم', size: '1 L', price: 44, shape: 'carton', dim: [0.075, 0.2, 0.075], bg: '#FFFFFF', accent: '#D7262B', text: '#1D3F8F', onAccent: '#FFFFFF' },
+      { id: 'faragello', sec: 0, brand: 'Faragello', brandAr: 'فرجللو', name: 'Guava Juice', nameAr: 'عصير جوافة', size: '1 L', price: 40, shape: 'carton', dim: [0.07, 0.19, 0.07], bg: '#F9C9D2', accent: '#3A9A3A', text: '#8A1538', onAccent: '#FFFFFF' },
+      { id: 'domty', sec: 0, brand: 'Domty', brandAr: 'دومتي', name: 'Feta Cheese', nameAr: 'جبنة فيتا', size: '500 g', price: 68, shape: 'box', dim: [0.13, 0.075, 0.09], bg: '#FFFFFF', accent: '#0E7A3C', text: '#C8102E', onAccent: '#FFFFFF' },
+      { id: 'juh_rayeb', sec: 0, brand: 'Juhayna', brandAr: 'جهينة', name: 'Rayeb Milk', nameAr: 'لبن رايب', size: '900 ml', price: 38, shape: 'carton', dim: [0.068, 0.16, 0.068], bg: '#FFFFFF', accent: '#1AA0D8', text: '#0D5C86', onAccent: '#FFFFFF' },
+
+      { id: 'chipsy_salt', sec: 1, brand: 'Chipsy', brandAr: 'شيبسي', name: 'Salt', nameAr: 'ملح', size: '70 g', price: 15, shape: 'bag', dim: [0.16, 0.24, 0.07, 1], bg: '#FFD100', accent: '#E2231A', text: '#C8102E', onAccent: '#FFFFFF', promo: true },
+      { id: 'chipsy_cheese', sec: 1, brand: 'Chipsy', brandAr: 'شيبسي', name: 'Cheese', nameAr: 'جبنة', size: '70 g', price: 15, shape: 'bag', dim: [0.16, 0.24, 0.07, 1], bg: '#F39200', accent: '#FFD100', text: '#FFFFFF', onAccent: '#7A2E00', promo: true },
+      { id: 'tiger', sec: 1, brand: 'Tiger', brandAr: 'تايجر', name: 'Hot & Spicy', nameAr: 'حار', size: '60 g', price: 12, shape: 'bag', dim: [0.15, 0.22, 0.065, 1], bg: '#161616', accent: '#F58220', text: '#F58220', onAccent: '#161616' },
+      { id: 'molto', sec: 1, brand: 'Molto', brandAr: 'مولتو', name: 'Chocolate Croissant', nameAr: 'كرواسون شوكولاتة', size: '60 g', price: 12, shape: 'bag', dim: [0.17, 0.085, 0.05, 0.8], bg: '#E4002B', accent: '#5B2A14', text: '#FFFFFF', onAccent: '#FFD9A0' },
+      { id: 'todo', sec: 1, brand: 'Todo', brandAr: 'تودو', name: 'Chocolate Cake', nameAr: 'كيك شوكولاتة', size: '45 g', price: 10, shape: 'bag', dim: [0.14, 0.08, 0.045, 0.8], bg: '#1D4F91', accent: '#FFCD00', text: '#FFFFFF', onAccent: '#1D4F91' },
+      { id: 'bakerolz', sec: 1, brand: 'Bake Rolz', brandAr: 'بيك رولز', name: 'Pizza', nameAr: 'بيتزا', size: '90 g', price: 20, shape: 'bag', dim: [0.14, 0.21, 0.06, 0.9], bg: '#00843D', accent: '#FFCD00', text: '#FFFFFF', onAccent: '#00552A' },
+
+      { id: 'baraka', sec: 2, brand: 'Baraka', brandAr: 'بركة', name: 'Natural Water', nameAr: 'مياه طبيعية', size: '1.5 L', price: 12, shape: 'bottle', dim: [0.045, 0.31], clear: true, body: '#CFE9F7', cap: '#0072BC', bg: '#FFFFFF', accent: '#0072BC', text: '#0072BC', onAccent: '#FFFFFF' },
+      { id: 'spiro', sec: 2, brand: 'Spiro Spathis', brandAr: 'سبيرو سباتس', name: 'Soda', nameAr: 'صودا', size: '330 ml', price: 14, shape: 'can', dim: [0.033, 0.122], bg: '#C8102E', accent: '#FFFFFF', text: '#FFFFFF', onAccent: '#C8102E' },
+      { id: 'v7', sec: 2, brand: 'V7', brandAr: 'في سفن', name: 'Lemon Lime', nameAr: 'ليمون', size: '330 ml', price: 12, shape: 'can', dim: [0.033, 0.122], bg: '#00A651', accent: '#FFF200', text: '#FFFFFF', onAccent: '#00552A' },
+      { id: 'arosa', sec: 2, brand: 'El Arosa', brandAr: 'العروسة', name: 'Black Tea', nameAr: 'شاي أسود', size: '100 bags', price: 75, shape: 'box', dim: [0.09, 0.15, 0.075], bg: '#0B6E3A', accent: '#D4AF37', text: '#FFFFFF', onAccent: '#0B3D20' },
+      { id: 'lipton', sec: 2, brand: 'Lipton', brandAr: 'ليبتون', name: 'Yellow Label Tea', nameAr: 'شاي العلامة الصفراء', size: '100 bags', price: 95, shape: 'box', dim: [0.13, 0.095, 0.07], bg: '#FFD200', accent: '#E2231A', text: '#E2231A', onAccent: '#FFFFFF' },
+      { id: 'abuauf', sec: 2, brand: 'Abu Auf', brandAr: 'أبو عوف', name: 'Turkish Coffee', nameAr: 'بن تركي', size: '200 g', price: 90, shape: 'bag', dim: [0.11, 0.17, 0.05, 0.6], bg: '#3B2314', accent: '#C9A86A', text: '#F0D9A8', onAccent: '#3B2314' },
+
+      { id: 'crystal', sec: 3, brand: 'Crystal', brandAr: 'كريستال', name: 'Sunflower Oil', nameAr: 'زيت عباد الشمس', size: '1.8 L', price: 135, shape: 'bottle', dim: [0.05, 0.3], clear: true, body: '#F3C632', cap: '#0A4D8C', bg: '#0A4D8C', accent: '#FFD200', text: '#FFFFFF', onAccent: '#0A4D8C', promo: true },
+      { id: 'doha', sec: 3, brand: 'El Doha', brandAr: 'الضحى', name: 'Egyptian Rice', nameAr: 'أرز مصري', size: '1 kg', price: 38, shape: 'bag', dim: [0.14, 0.22, 0.065, 0.5], bg: '#FFFFFF', accent: '#0A8A3A', text: '#0A5A2A', onAccent: '#FFFFFF' },
+      { id: 'regina', sec: 3, brand: 'Regina', brandAr: 'ريجينا', name: 'Penne Pasta', nameAr: 'مكرونة قلم', size: '400 g', price: 22, shape: 'bag', dim: [0.13, 0.21, 0.05, 0.7], bg: '#1A3A8F', accent: '#FFCD00', text: '#FFFFFF', onAccent: '#1A3A8F' },
+      { id: 'maleka', sec: 3, brand: 'El Maleka', brandAr: 'الملكة', name: 'Macaroni', nameAr: 'مكرونة', size: '1 kg', price: 34, shape: 'bag', dim: [0.15, 0.24, 0.06, 0.7], bg: '#D71920', accent: '#FFD200', text: '#FFFFFF', onAccent: '#8A0F14' },
+      { id: 'harvest', sec: 3, brand: 'Harvest', brandAr: 'هارفست', name: 'Tomato Paste', nameAr: 'صلصة طماطم', size: '360 g', price: 28, shape: 'can', dim: [0.038, 0.09], bg: '#D71920', accent: '#2E8B3A', text: '#FFFFFF', onAccent: '#FFFFFF' },
+      { id: 'qaha', sec: 3, brand: 'Qaha', brandAr: 'قها', name: 'Foul Medames', nameAr: 'فول مدمس', size: '400 g', price: 20, shape: 'can', dim: [0.037, 0.11], bg: '#F5E6C8', accent: '#8B1A1A', text: '#5A2A0A', onAccent: '#F5E6C8' },
+
+      { id: 'persil', sec: 4, brand: 'Persil', brandAr: 'برسيل', name: 'Power Gel', nameAr: 'جل غسيل', size: '2.5 L', price: 230, shape: 'jug', dim: [0.075, 0.3], body: '#0A6E3A', cap: '#E30613', bg: '#0A6E3A', accent: '#E30613', text: '#FFFFFF', onAccent: '#FFFFFF', promo: true },
+      { id: 'ariel', sec: 4, brand: 'Ariel', brandAr: 'أريال', name: 'Washing Powder', nameAr: 'مسحوق غسيل', size: '2.5 kg', price: 260, shape: 'box', dim: [0.24, 0.3, 0.1], bg: '#00843D', accent: '#FFFFFF', text: '#FFFFFF', onAccent: '#00843D' },
+      { id: 'pril', sec: 4, brand: 'Pril', brandAr: 'بريل', name: 'Dish Soap', nameAr: 'سائل أطباق', size: '650 ml', price: 42, shape: 'bottle', dim: [0.034, 0.24], body: '#7AC143', cap: '#FFFFFF', bg: '#FFFFFF', accent: '#0072BC', text: '#2A7A1A', onAccent: '#FFFFFF' },
+      { id: 'fine', sec: 4, brand: 'Fine', brandAr: 'فاين', name: 'Facial Tissues', nameAr: 'مناديل', size: '550 sheets', price: 55, shape: 'box', dim: [0.23, 0.09, 0.11], bg: '#FFFFFF', accent: '#0072BC', text: '#0072BC', onAccent: '#FFFFFF' },
+      { id: 'clorox', sec: 4, brand: 'Clorox', brandAr: 'كلوركس', name: 'Bleach', nameAr: 'مبيض', size: '1 L', price: 35, shape: 'jug', dim: [0.05, 0.27], body: '#F4F4F4', cap: '#0A4EA2', bg: '#0A4EA2', accent: '#FFFFFF', text: '#FFFFFF', onAccent: '#0A4EA2' }
+    ];
+  }
+
+  // ---------- lifecycle ----------
+  componentDidMount() {
+    this._alive = true;
+    this._tryInit();
+    setTimeout(() => {
+      if (!this._canvas) {
+        const c = document.querySelector('canvas[data-aisle]');
+        if (c) this._attach(c);
+      }
+    }, 60);
+  }
+
+  componentWillUnmount() {
+    this._alive = false;
+    cancelAnimationFrame(this._raf);
+    clearTimeout(this._toastT);
+    if (this._renderer) {
+      this._renderer.dispose();
+      if (this._renderer.forceContextLoss) this._renderer.forceContextLoss();
+    }
+  }
+
+  _attach(el) {
+    if (!el || this._canvas === el) return;
+    this._canvas = el;
+    this._tryInit();
+  }
+
+  _tryInit() {
+    if (this._started || !this._canvas || !this._alive) return;
+    if (!window.THREE) {
+      this._tries = (this._tries || 0) + 1;
+      if (this._tries > 80) { this.setState({ failed: true, loading: false }); return; }
+      setTimeout(() => this._tryInit(), 100);
+      return;
+    }
+    this._started = true;
+    const fonts = document.fonts && document.fonts.load
+      ? Promise.race([
+          Promise.all([document.fonts.load('900 40px Figtree'), document.fonts.load('700 40px Figtree'), document.fonts.load('700 40px "IBM Plex Sans Arabic"')]),
+          new Promise((r) => setTimeout(r, 1800))
+        ]).catch(() => null)
+      : Promise.resolve();
+    fonts.then(() => {
+      if (!this._alive) return;
+      try { this._build(); } catch (e) { console.error(e); this.setState({ failed: true, loading: false }); }
+    });
+  }
+
+  _toast(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => { if (this._alive) this.setState({ toast: '' }); }, 1800);
+  }
+
+  // ---------- helpers ----------
+  _rand() {
+    this._seed = (this._seed + 0x6D2B79F5) | 0;
+    let t = this._seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  _fit(g, text, weight, size, maxW, fam) {
+    let s = Math.max(6, Math.round(size));
+    g.font = weight + ' ' + s + 'px ' + fam;
+    while (s > 6 && g.measureText(text).width > maxW) { s -= 1; g.font = weight + ' ' + s + 'px ' + fam; }
+  }
+
+  _tex(w, h, draw, repeat) {
+    const T = window.THREE;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d');
+    draw(g, w, h);
+    const t = new T.CanvasTexture(c);
+    t.encoding = T.sRGBEncoding;
+    t.anisotropy = this._aniso || 1;
+    if (repeat) { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+    return t;
+  }
+
+  _drawLabel(g, W, H, p, wrap) {
+    const LAT = '"Figtree", "Arial Black", Arial, sans-serif';
+    const AR = '"IBM Plex Sans Arabic", "Noto Sans Arabic", Tahoma, sans-serif';
+    const cw = wrap ? W * 0.44 : W;
+    const cx = W / 2;
+    g.fillStyle = p.bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = p.accent;
+    g.beginPath();
+    g.moveTo(0, H * 0.58);
+    g.bezierCurveTo(W * 0.3, H * 0.5, W * 0.7, H * 0.68, W, H * 0.56);
+    g.lineTo(W, H * 0.84);
+    g.bezierCurveTo(W * 0.62, H * 0.9, W * 0.38, H * 0.78, 0, H * 0.87);
+    g.closePath(); g.fill();
+    if (p.accent2) { g.fillStyle = p.accent2; g.fillRect(0, H * 0.06, W, H * 0.03); }
+    g.fillStyle = 'rgba(255,255,255,0.10)';
+    g.beginPath(); g.ellipse(cx - cw * 0.2, H * 0.22, cw * 0.5, H * 0.08, -0.3, 0, Math.PI * 2); g.fill();
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const big = Math.min(H * 0.18, cw * 0.3);
+    g.fillStyle = p.text;
+    this._fit(g, p.brand, 900, big, cw * 0.9, LAT); g.fillText(p.brand, cx, H * 0.25);
+    this._fit(g, p.brandAr, 700, big * 0.66, cw * 0.86, AR); g.fillText(p.brandAr, cx, H * 0.41);
+    g.fillStyle = p.onAccent || '#FFFFFF';
+    this._fit(g, p.name, 800, big * 0.5, cw * 0.9, LAT); g.fillText(p.name, cx, H * 0.655);
+    this._fit(g, p.nameAr, 700, big * 0.46, cw * 0.9, AR); g.fillText(p.nameAr, cx, H * 0.765);
+    g.fillStyle = p.text;
+    this._fit(g, p.size, 800, big * 0.42, cw * 0.6, LAT); g.fillText(p.size, cx, H * 0.935);
+    if (wrap) {
+      g.fillStyle = 'rgba(0,0,0,0.28)';
+      for (let i = 0; i < 6; i++) { g.fillRect(W * 0.06, H * (0.3 + i * 0.06), W * 0.14 * (i % 2 ? 0.7 : 1), H * 0.018); }
+      for (let i = 0; i < 16; i++) { g.fillRect(W * 0.82 + i * W * 0.006, H * 0.3, (i % 3) + 1, H * 0.16); }
+    }
+  }
+
+  _labelMat(p, w, h, wrap, opts) {
+    const T = window.THREE;
+    const k = 640 / Math.max(w, h);
+    const W = Math.max(64, Math.round(w * k)); const H = Math.max(64, Math.round(h * k));
+    const tex = this._tex(W, H, (g, ww, hh) => this._drawLabel(g, ww, hh, p, wrap));
+    return new T.MeshStandardMaterial(Object.assign({ map: tex, roughness: 0.5, metalness: 0.02 }, opts || {}));
+  }
+
+  // parts: [{geo, mat}] with the pack's front facing +z and its base at y = 0
+  _parts(p) {
+    const T = window.THREE;
+    const side = new T.MeshStandardMaterial({ color: p.bg, roughness: 0.55 });
+    const d = p.dim;
+    if (p.shape === 'box') {
+      const [w, h, dd] = d;
+      const front = this._labelMat(p, w, h, false, { roughness: 0.45 });
+      return { parts: [{ geo: new T.BoxGeometry(w, h, dd).translate(0, h / 2, 0), mat: [side, side, side, side, front, front] }], fw: w, fd: dd, h };
+    }
+    if (p.shape === 'carton') {
+      const [w, h, dd] = d;
+      const front = this._labelMat(p, w, h, false, { roughness: 0.4 });
+      const sideLab = this._labelMat(p, dd, h, false, { roughness: 0.4 });
+      const hw = w / 2, hd = dd / 2, rh = dd * 0.34;
+      const v = [
+        -hw, h, hd, hw, h, hd, hw, h + rh, 0, -hw, h, hd, hw, h + rh, 0, -hw, h + rh, 0,
+        -hw, h, -hd, -hw, h + rh, 0, hw, h + rh, 0, -hw, h, -hd, hw, h + rh, 0, hw, h, -hd,
+        -hw, h, hd, -hw, h + rh, 0, -hw, h, -hd, hw, h, hd, hw, h, -hd, hw, h + rh, 0
+      ];
+      const roof = new T.BufferGeometry();
+      roof.setAttribute('position', new T.Float32BufferAttribute(v, 3));
+      roof.computeVertexNormals();
+      const roofMat = new T.MeshStandardMaterial({ color: p.bg, roughness: 0.45, side: T.DoubleSide });
+      return {
+        parts: [
+          { geo: new T.BoxGeometry(w, h, dd).translate(0, h / 2, 0), mat: [sideLab, sideLab, side, side, front, front] },
+          { geo: roof, mat: roofMat },
+          { geo: new T.BoxGeometry(w, 0.016, 0.004).translate(0, h + rh + 0.006, 0), mat: roofMat }
+        ], fw: w, fd: dd, h: h + rh + 0.014
+      };
+    }
+    if (p.shape === 'can') {
+      const [r, h] = d;
+      const lab = this._labelMat(p, 2 * Math.PI * r, h, true, { metalness: 0.45, roughness: 0.3 });
+      const metal = new T.MeshStandardMaterial({ color: 0xC9CDD2, metalness: 0.95, roughness: 0.28 });
+      return {
+        parts: [
+          { geo: new T.CylinderGeometry(r, r, h, 32, 1, false, Math.PI).translate(0, h / 2, 0), mat: [lab, metal, metal] },
+          { geo: new T.CylinderGeometry(r * 0.9, r * 0.96, 0.008, 32).translate(0, h + 0.004, 0), mat: metal }
+        ], fw: 2 * r, fd: 2 * r, h: h + 0.008
+      };
+    }
+    if (p.shape === 'bottle' || p.shape === 'jug') {
+      const [r, h] = d;
+      const jug = p.shape === 'jug';
+      const pts = (jug
+        ? [[0, 0], [r * 0.9, 0], [r, 0.015], [r, h * 0.74], [r * 0.86, h * 0.82], [r * 0.42, h * 0.88], [r * 0.36, h * 0.9], [0, h * 0.9]]
+        : [[0, 0], [r * 0.8, 0], [r * 0.97, 0.01], [r, 0.03], [r, h * 0.58], [r * 0.93, h * 0.66], [r * 0.6, h * 0.79], [r * 0.34, h * 0.88], [r * 0.32, h * 0.93], [0, h * 0.93]]
+      ).map(([x, y]) => new T.Vector2(x, y));
+      const bodyGeo = new T.LatheGeometry(pts, 32);
+      const bodyMat = p.clear
+        ? new T.MeshStandardMaterial({ color: p.body, transparent: true, opacity: 0.55, roughness: 0.06, metalness: 0.1, depthWrite: false })
+        : new T.MeshStandardMaterial({ color: p.body, roughness: 0.32, metalness: 0.05 });
+      const lh = jug ? h * 0.46 : h * 0.3;
+      const ly = jug ? h * 0.12 : h * 0.24;
+      const labGeo = new T.CylinderGeometry(r * 1.015, r * 1.015, lh, 32, 1, true, Math.PI).translate(0, ly + lh / 2, 0);
+      const lab = this._labelMat(p, 2 * Math.PI * r, lh, true, { roughness: 0.35 });
+      const cr = jug ? r * 0.44 : r * 0.34;
+      const ch = jug ? h * 0.09 : h * 0.06;
+      const capY = jug ? h * 0.9 : h * 0.93;
+      const capGeo = new T.CylinderGeometry(cr, cr, ch, 20).translate(0, capY + ch / 2, 0);
+      const capMat = new T.MeshStandardMaterial({ color: p.cap, roughness: 0.4 });
+      if (jug) { bodyGeo.scale(1, 1, 0.62); labGeo.scale(1, 1, 0.62); }
+      return {
+        parts: [{ geo: bodyGeo, mat: bodyMat }, { geo: labGeo, mat: lab }, { geo: capGeo, mat: capMat }],
+        fw: 2 * r, fd: jug ? 2 * r * 0.62 : 2 * r, h: capY + ch
+      };
+    }
+    // bag: a puffed pillow pack with flat crimped seals
+    const [w, h, dd, puff] = d;
+    const geo = new T.BoxGeometry(w, h, dd, 14, 16, 1);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      const nx = x / (w / 2), ny = y / (h / 2);
+      let f = Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(nx), 2.6))) * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(ny), 3)), 0.45);
+      if (Math.abs(ny) > 0.9) f = 0;
+      f = f * puff + (1 - puff) * Math.min(1, f * 3);
+      pos.setZ(i, Math.sign(z) * Math.max(0.0015, (dd / 2) * f));
+    }
+    geo.translate(0, h / 2, 0);
+    geo.computeVertexNormals();
+    const front = this._labelMat(p, w, h, false, { roughness: 0.32, metalness: 0.28 });
+    return { parts: [{ geo, mat: [side, side, side, side, front, front] }], fw: w, fd: dd, h };
+  }
+
+  // ---------- scene ----------
+  _build() {
+    const T = window.THREE;
+    this._seed = 20260924;
+    const LAT = '"Figtree", "Arial Black", Arial, sans-serif';
+    const AR = '"IBM Plex Sans Arabic", "Noto Sans Arabic", Tahoma, sans-serif';
+    const canvas = this._canvas;
+    const renderer = new T.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(390, 844, false);
+    renderer.outputEncoding = T.sRGBEncoding;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    this._renderer = renderer;
+    this._aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+    const scene = new T.Scene();
+    const BG = 0xEEEAE3;
+    scene.background = new T.Color(BG);
+    scene.fog = new T.Fog(BG, 9, 25);
+    const camera = new T.PerspectiveCamera(74, 390 / 844, 0.03, 60);
+    scene.add(camera);
+    this._scene = scene; this._camera = camera;
+
+    // image-based light: a bright store interior baked into an environment map
+    const pmrem = new T.PMREMGenerator(renderer);
+    const env = new T.Scene();
+    const room = new T.Mesh(new T.BoxGeometry(14, 6, 32), new T.MeshBasicMaterial({ color: 0xCFCAC0, side: T.BackSide }));
+    room.position.y = 3; env.add(room);
+    for (let z = -14; z <= 14; z += 3.5) {
+      for (const x of [-3, 0, 3]) {
+        const l = new T.Mesh(new T.PlaneGeometry(0.6, 2.2), new T.MeshBasicMaterial({ color: new T.Color(7, 7, 6.6), side: T.DoubleSide }));
+        l.rotation.x = Math.PI / 2; l.position.set(x, 5.95, z); env.add(l);
+      }
+    }
+    scene.environment = pmrem.fromScene(env, 0.03).texture;
+
+    scene.add(new T.HemisphereLight(0xFFFFFF, 0xCFC7B8, 0.5));
+    const sun = new T.DirectionalLight(0xFFF3E2, 0.35); sun.position.set(2, 6, 4); scene.add(sun);
+    for (let i = 0; i < 6; i++) { const pl = new T.PointLight(0xFFF2DE, 0.45, 8.5, 1.6); pl.position.set(0, 3.0, 1.2 - i * 3.6); scene.add(pl); }
+
+    const add = (geo, mat, x, y, z, ry) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; scene.add(m); return m; };
+
+    // floor, ceiling, walls
+    const floorTex = this._tex(512, 512, (g, w, h) => {
+      const cols = ['#ECE8E0', '#E7E3DA', '#EFEBE4', '#E9E5DD'];
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { g.fillStyle = cols[i * 2 + j]; g.fillRect(i * 256, j * 256, 256, 256); }
+      for (let n = 0; n < 2600; n++) { g.fillStyle = 'rgba(110,100,85,' + (this._rand() * 0.09).toFixed(3) + ')'; g.fillRect(this._rand() * w, this._rand() * h, 2, 2); }
+      g.fillStyle = '#C9C3B6';
+      for (let k = 0; k <= 2; k++) { g.fillRect(k * 256 - 2, 0, 4, h); g.fillRect(0, k * 256 - 2, w, 4); }
+    }, [14 / 1.2, 32 / 1.2]);
+    const floor = new T.Mesh(new T.PlaneGeometry(14, 32), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.18, metalness: 0, envMapIntensity: 1.25 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, -8); scene.add(floor);
+
+    const ceilTex = this._tex(256, 256, (g, w, h) => { g.fillStyle = '#F4F2EE'; g.fillRect(0, 0, w, h); g.fillStyle = '#D9D5CD'; g.fillRect(0, 0, w, 3); g.fillRect(0, 0, 3, h); }, [14 / 0.6, 32 / 0.6]);
+    const ceil = new T.Mesh(new T.PlaneGeometry(14, 32), new T.MeshStandardMaterial({ map: ceilTex, roughness: 0.9 }));
+    ceil.rotation.x = Math.PI / 2; ceil.position.set(0, 3.45, -8); scene.add(ceil);
+    const lampMat = new T.MeshBasicMaterial({ color: 0xFFFFFF });
+    const lampFrame = new T.MeshStandardMaterial({ color: 0xBFC3C7, metalness: 0.6, roughness: 0.4 });
+    for (let i = 0; i < 6; i++) {
+      for (const x of [-2.6, 0, 2.6]) {
+        add(new T.BoxGeometry(0.16, 0.05, 2.4), lampFrame, x, 3.4, 0.6 - i * 3.6);
+        add(new T.BoxGeometry(0.1, 0.02, 2.3), lampMat, x, 3.37, 0.6 - i * 3.6);
+      }
+    }
+    const wallMat = new T.MeshStandardMaterial({ color: 0xE8E3D9, roughness: 0.9 });
+    add(new T.PlaneGeometry(32, 3.45), wallMat, -6.5, 1.725, -8, Math.PI / 2);
+    add(new T.PlaneGeometry(32, 3.45), wallMat, 6.5, 1.725, -8, -Math.PI / 2);
+    add(new T.PlaneGeometry(14, 3.45), wallMat, 0, 1.725, -23.5);
+
+    // soft contact shadows where shelves meet the floor
+    const shadowTex = this._tex(256, 8, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(0,0,0,0.34)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    shadowTex.encoding = T.LinearEncoding;
+    for (const s of [-1, 1]) {
+      const sh = new T.Mesh(new T.PlaneGeometry(0.45, 18), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+      sh.rotation.x = -Math.PI / 2; sh.position.set(s * (1.1 - 0.225), 0.002, -9);
+      if (s > 0) sh.scale.x = -1;
+      scene.add(sh);
+    }
+
+    // gondola shelving on both sides
+    const LEN = 18;
+    const LEVELS = [0.14, 0.52, 0.9, 1.28, 1.66];
+    const steel = new T.MeshStandardMaterial({ color: 0xDADDE0, metalness: 0.55, roughness: 0.36 });
+    const plinthMat = new T.MeshStandardMaterial({ color: 0x55595E, metalness: 0.3, roughness: 0.55 });
+    const lipMat = new T.MeshStandardMaterial({ color: 0xF4F4F2, roughness: 0.4 });
+    const pegTex = this._tex(256, 256, (g, w, h) => { g.fillStyle = '#E2E0DB'; g.fillRect(0, 0, w, h); g.fillStyle = '#C3C0B9'; for (let x = 16; x < w; x += 32) for (let y = 16; y < h; y += 32) { g.beginPath(); g.arc(x, y, 3.2, 0, Math.PI * 2); g.fill(); } }, [LEN / 0.5, 2.05 / 0.5]);
+    const backMat = new T.MeshStandardMaterial({ map: pegTex, roughness: 0.85 });
+    const secs = this.sections();
+    for (const s of [-1, 1]) {
+      add(new T.PlaneGeometry(LEN, 2.05), backMat, s * 1.64, 1.025, -LEN / 2, -s * Math.PI / 2);
+      add(new T.BoxGeometry(0.52, 0.14, LEN), plinthMat, s * 1.37, 0.07, -LEN / 2);
+      LEVELS.forEach((y) => {
+        add(new T.BoxGeometry(0.52, 0.022, LEN), steel, s * 1.37, y - 0.011, -LEN / 2);
+        add(new T.BoxGeometry(0.012, 0.05, LEN), lipMat, s * 1.105, y - 0.028, -LEN / 2);
+      });
+      add(new T.BoxGeometry(0.56, 0.03, LEN), steel, s * 1.38, 2.04, -LEN / 2);
+      for (let b = 0; b <= 15; b++) add(new T.BoxGeometry(0.04, 2.05, 0.035), steel, s * 1.61, 1.025, -b * 1.2);
+      for (const z of [0.015, -LEN - 0.015]) add(new T.BoxGeometry(0.56, 2.06, 0.03), steel, s * 1.38, 1.03, z);
+      secs.forEach((sec, si) => {
+        const hdr = this._tex(1024, 64, (g, w, h) => {
+          g.fillStyle = sec.color; g.fillRect(0, 0, w, h);
+          g.fillStyle = '#FFFFFF'; g.textBaseline = 'middle';
+          g.textAlign = 'left'; this._fit(g, sec.name.toUpperCase(), 800, 38, 440, LAT); g.fillText(sec.name.toUpperCase(), 24, 34);
+          g.textAlign = 'right'; this._fit(g, sec.ar, 700, 38, 440, AR); g.fillText(sec.ar, w - 24, 34);
+        });
+        add(new T.PlaneGeometry(3.56, 0.22), new T.MeshStandardMaterial({ map: hdr, roughness: 0.5 }), s * 1.098, 2.18, -(si * 3.6 + 1.8), -s * Math.PI / 2);
+      });
+    }
+
+    // hanging aisle signs
+    secs.forEach((sec, si) => {
+      const tex = this._tex(1024, 256, (g, w, h) => {
+        g.fillStyle = '#1E6B47'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(120, 128, 84, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#1E6B47'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 104px ' + LAT; g.fillText(String(si + 1), 120, 134);
+        g.fillStyle = '#FFFFFF'; g.textAlign = 'left'; this._fit(g, sec.name, 800, 70, 560, LAT); g.fillText(sec.name, 236, 90);
+        this._fit(g, sec.ar, 700, 64, 560, AR); g.textAlign = 'left'; g.fillText(sec.ar, 236, 182);
+      });
+      const green = new T.MeshStandardMaterial({ color: 0x1E6B47, roughness: 0.5 });
+      const face = new T.MeshStandardMaterial({ map: tex, roughness: 0.5 });
+      const z = -(si * 3.6 + 1.2);
+      add(new T.BoxGeometry(1.9, 0.48, 0.035), [green, green, green, green, face, face], 0, 2.78, z);
+      for (const x of [-0.8, 0.8]) add(new T.CylinderGeometry(0.004, 0.004, 0.45, 6), steel, x, 3.23, z);
+    });
+    // distant signs over neighbouring aisles
+    [['Bakery', 'مخبوزات', -4.2, -4], ['Fruit & Veg', 'خضار وفاكهة', 4.2, -5], ['Frozen', 'مجمدات', -4.2, -13], ['Personal Care', 'عناية شخصية', 4.2, -14]].forEach(([n, a, x, z]) => {
+      const tex = this._tex(768, 192, (g, w, h) => { g.fillStyle = '#3A3F3A'; g.fillRect(0, 0, w, h); g.fillStyle = '#FFFFFF'; g.textBaseline = 'middle'; g.textAlign = 'left'; this._fit(g, n, 800, 64, 380, LAT); g.fillText(n, 30, 96); g.textAlign = 'right'; this._fit(g, a, 700, 60, 320, AR); g.fillText(a, w - 30, 96); });
+      const m = add(new T.PlaneGeometry(1.6, 0.4), new T.MeshStandardMaterial({ map: tex, roughness: 0.6, side: T.DoubleSide }), x, 2.75, z);
+      m.rotation.y = x < 0 ? 0.5 : -0.5;
+    });
+
+    // ---------- products ----------
+    const P = this.products();
+    const byId = {}; P.forEach((p) => { byId[p.id] = p; });
+    this._byId = byId;
+    const built = {}; P.forEach((p) => { built[p.id] = this._parts(p); });
+    this._built = built;
+    const place = {}; const tagPlace = {}; const shelfOf = {};
+    P.forEach((p) => { place[p.id] = []; tagPlace[p.id] = []; });
+    const M = new T.Matrix4(), Q = new T.Quaternion(), V = new T.Vector3(), S1 = new T.Vector3(1, 1, 1), E = new T.Euler();
+    const GROUP = [2, 1, 1, 0, 0];
+    const levelNames = ['bottom shelf', 'lower shelf', 'middle shelf', 'eye-level shelf', 'top shelf'];
+    secs.forEach((sec, si) => {
+      const ids = P.filter((p) => p.sec === si).map((p) => p.id);
+      [-1, 1].forEach((s, sideIdx) => {
+        for (let bay = 0; bay < 3; bay++) {
+          const zStart = -(si * 3.6 + bay * 1.2);
+          for (let lv = 0; lv < 5; lv++) {
+            const pid = ids[(bay * 2 + GROUP[lv] + sideIdx * 3 + si) % ids.length];
+            const b = built[pid];
+            const gap = 0.007;
+            const n = Math.max(1, Math.floor(1.12 / (b.fw + gap)));
+            const rows = Math.min(3, Math.max(1, Math.floor(0.46 / (b.fd + 0.008))));
+            const slack = 1.12 - n * (b.fw + gap);
+            if (!shelfOf[pid]) shelfOf[pid] = (s < 0 ? 'left side, ' : 'right side, ') + levelNames[lv];
+            for (let i = 0; i < n; i++) {
+              const zc = zStart - 0.04 - slack / 2 - b.fw / 2 - i * (b.fw + gap);
+              if (i === 0 || i === Math.floor(n / 2) + 1) {
+                E.set(0, -s * Math.PI / 2, 0); Q.setFromEuler(E); V.set(s * 1.0975, LEVELS[lv] - 0.029, zc - (s < 0 ? 0 : 0));
+                M.compose(V, Q, S1); tagPlace[pid].push(M.clone());
+              }
+              if (this._rand() < 0.035) continue;
+              for (let r = 0; r < rows; r++) {
+                if (r > 0 && this._rand() < 0.12) continue;
+                const pull = r === 0 ? this._rand() * 0.018 : 0;
+                E.set(0, -s * Math.PI / 2 + (this._rand() - 0.5) * 0.08, 0); Q.setFromEuler(E);
+                V.set(s * (1.118 + pull + b.fd / 2 + r * (b.fd + 0.008)), LEVELS[lv] + 0.0005, zc + (this._rand() - 0.5) * 0.004);
+                M.compose(V, Q, S1); place[pid].push(M.clone());
+              }
+            }
+          }
+        }
+      });
+    });
+    this._shelfOf = shelfOf;
+
+    // promo display at the end of the aisle
+    const EZ = -19.1;
+    add(new T.BoxGeometry(2.3, 0.12, 0.7), new T.MeshStandardMaterial({ color: 0xC8102E, roughness: 0.5 }), 0, 0.06, EZ);
+    [0.5, 0.9, 1.3].forEach((y, i) => { add(new T.BoxGeometry(2.3, 0.03, 0.6 - i * 0.12), steel, 0, y - 0.015, EZ + i * 0.06); });
+    for (const x of [-1.15, 1.15]) add(new T.BoxGeometry(0.05, 2.3, 0.05), steel, x, 1.15, EZ - 0.25);
+    const promoTex = this._tex(1024, 256, (g, w, h) => {
+      g.fillStyle = '#C8102E'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#FFD100'; g.fillRect(0, h - 18, w, 18);
+      g.fillStyle = '#FFFFFF'; g.textBaseline = 'middle';
+      g.textAlign = 'left'; this._fit(g, 'DEAL OF THE WEEK', 900, 64, 560, LAT); g.fillText('DEAL OF THE WEEK', 36, 78);
+      g.textAlign = 'right'; this._fit(g, 'عرض الأسبوع', 700, 64, 360, AR); g.fillText('عرض الأسبوع', w - 36, 78);
+      g.fillStyle = '#FFD100'; g.textAlign = 'center'; this._fit(g, 'Chipsy · any 2 for EGP 25 (sample)', 800, 58, 920, LAT); g.fillText('Chipsy · any 2 for EGP 25 (sample)', w / 2, 168);
+    });
+    add(new T.BoxGeometry(2.3, 0.58, 0.03), [steel, steel, steel, steel, new T.MeshStandardMaterial({ map: promoTex, roughness: 0.5 }), steel], 0, 2.05, EZ - 0.25);
+    [[0.12, 'chipsy_salt', 'chipsy_cheese'], [0.5, 'chipsy_cheese', 'chipsy_salt'], [0.9, 'chipsy_salt', 'chipsy_cheese'], [1.3, 'chipsy_cheese', 'chipsy_salt']].forEach(([y, a, bb], li) => {
+      for (let i = 0; i < 12; i++) {
+        const pid = i < 6 ? a : bb; const b = built[pid];
+        for (let r = 0; r < 2; r++) {
+          E.set(0, (this._rand() - 0.5) * 0.1, 0); Q.setFromEuler(E);
+          V.set(-1.05 + i * 0.19 + (this._rand() - 0.5) * 0.01, y, EZ + 0.24 + li * 0.05 - r * 0.09 - li * 0.08);
+          M.compose(V, Q, S1); place[pid].push(M.clone());
+        }
+      }
+    });
+
+    // overstock cases on top of the shelving
+    const caseTex = this._tex(256, 256, (g, w, h) => { g.fillStyle = '#B98D5E'; g.fillRect(0, 0, w, h); g.fillStyle = '#A57A4E'; for (let i = 0; i < 40; i++) g.fillRect(0, i * 7, w, 1); g.fillStyle = '#D8C7A6'; g.fillRect(w * 0.44, 0, w * 0.12, h); g.fillStyle = 'rgba(40,30,20,.55)'; g.font = '800 30px ' + LAT; g.textAlign = 'center'; g.fillText('THIS SIDE UP', w / 2, h * 0.8); });
+    const caseMat = new T.MeshStandardMaterial({ map: caseTex, roughness: 0.85 });
+    const caseCount = 64;
+    const cases = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), caseMat, caseCount);
+    for (let i = 0; i < caseCount; i++) {
+      const s = i % 2 ? 1 : -1;
+      const sx = 0.34 + this._rand() * 0.16, sy = 0.2 + this._rand() * 0.18, sz = 0.3 + this._rand() * 0.2;
+      E.set(0, (this._rand() - 0.5) * 0.12, 0); Q.setFromEuler(E);
+      V.set(s * (1.3 + this._rand() * 0.1), 2.055, -0.3 - Math.floor(i / 2) * 0.56 - this._rand() * 0.05);
+      M.compose(V, Q, new T.Vector3(sx, sy, sz)); cases.setMatrixAt(i, M);
+    }
+    cases.frustumCulled = false; scene.add(cases);
+
+    // instanced packs and their shelf-edge price tags
+    this._inst = {};
+    this._pickables = [];
+    this._zero = new T.Matrix4().makeScale(0, 0, 0);
+    P.forEach((p) => {
+      const list = place[p.id];
+      if (list.length) {
+        const meshes = built[p.id].parts.map((part) => {
+          const im = new T.InstancedMesh(part.geo, part.mat, list.length);
+          list.forEach((m, i) => im.setMatrixAt(i, m));
+          im.instanceMatrix.setUsage(T.DynamicDrawUsage);
+          im.frustumCulled = false;
+          im.userData.pid = p.id;
+          scene.add(im);
+          return im;
+        });
+        this._inst[p.id] = { meshes, mats: list };
+        meshes.forEach((m) => this._pickables.push(m));
+      }
+      const tags = tagPlace[p.id];
+      if (tags.length) {
+        const tex = this._tex(256, 128, (g, w, h) => {
+          g.fillStyle = p.promo ? '#FFD83A' : '#FFFFFF'; g.fillRect(0, 0, w, h);
+          g.fillStyle = '#1A1C19'; g.textBaseline = 'top'; g.textAlign = 'left';
+          this._fit(g, p.brand + ' ' + p.name, 700, 19, 236, LAT); g.fillText(p.brand + ' ' + p.name, 10, 8);
+          g.textAlign = 'right'; this._fit(g, p.nameAr, 600, 18, 200, AR); g.fillText(p.nameAr, w - 10, 32);
+          for (let i = 0; i < 20; i++) g.fillRect(10 + i * 4, h - 42, (i * 7) % 3 + 1, 28);
+          if (p.promo) { g.fillStyle = '#C8102E'; g.textAlign = 'left'; g.font = '900 17px ' + LAT; g.fillText('OFFER', 10, 58); }
+          g.fillStyle = p.promo ? '#C8102E' : '#1A1C19'; g.textBaseline = 'alphabetic'; g.textAlign = 'right';
+          g.font = '900 56px ' + LAT; g.fillText(String(p.price), w - 58, h - 12);
+          g.font = '800 18px ' + LAT; g.fillText('EGP', w - 10, h - 16);
+        });
+        const tm = new T.InstancedMesh(new T.PlaneGeometry(0.075, 0.037), new T.MeshStandardMaterial({ map: tex, roughness: 0.6 }), tags.length);
+        tags.forEach((m, i) => tm.setMatrixAt(i, m));
+        tm.frustumCulled = false; scene.add(tm);
+      }
+    });
+
+    // ---------- walking state ----------
+    this._k = { z: 2.3, vz: 0, walk: 0, goal: null, yaw: 0, pitch: -0.07, yawT: 0, pitchT: -0.07, bob: 0 };
+    this._ray = new T.Raycaster();
+    const clock = new T.Clock();
+    let first = true;
+    const loop = () => {
+      if (!this._alive) return;
+      this._raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, clock.getDelta());
+      this._step(dt, clock.elapsedTime);
+      renderer.render(scene, camera);
+      if (first) { first = false; this.setState({ loading: false }); }
+    };
+    loop();
+  }
+
+  _step(dt, t) {
+    const k = this._k;
+    const ZMAX = 2.4, ZMIN = -17.4;
+    let target = 0;
+    if (this._pick) k.walk = 0;
+    if (k.walk) { target = -k.walk * 1.45; k.goal = null; }
+    else if (k.goal !== null) {
+      const d = k.goal - k.z;
+      if (Math.abs(d) < 0.03) k.goal = null; else target = Math.sign(d) * Math.min(2.4, Math.abs(d) * 2.4);
+    }
+    k.vz += (target - k.vz) * Math.min(1, dt * 5);
+    k.z = Math.max(ZMIN, Math.min(ZMAX, k.z + k.vz * dt));
+    if ((k.z === ZMIN && k.vz < 0) || (k.z === ZMAX && k.vz > 0)) k.vz = 0;
+    k.bob += Math.abs(k.vz) * dt * 6.5;
+    k.yaw += (k.yawT - k.yaw) * Math.min(1, dt * 9);
+    k.pitch += (k.pitchT - k.pitch) * Math.min(1, dt * 9);
+    const cam = this._camera;
+    const bobAmt = Math.min(1, Math.abs(k.vz)) * 0.014;
+    cam.position.set(Math.sin(k.bob * 0.5) * bobAmt * 0.6, 1.56 + Math.sin(k.bob) * bobAmt, k.z);
+    cam.rotation.set(k.pitch, k.yaw, 0, 'YXZ');
+    if (this._pick) this._animPick(dt, t);
+
+    const st = this.state || {};
+    const sec = Math.max(0, Math.min(4, Math.floor((-k.z + 1.0) / 3.6)));
+    const prog = Math.round(Math.max(0, Math.min(1, (ZMAX - k.z) / (ZMAX - ZMIN))) * 100);
+    if (sec !== (st.section || 0) || Math.abs(prog - (st.progress || 0)) >= 2) this.setState({ section: sec, progress: prog });
+  }
+
+  // ---------- picking a pack off the shelf ----------
+  _tapAt(cx, cy) {
+    if (!this._camera || this._pick) return;
+    const T = window.THREE;
+    const rect = this._canvas.getBoundingClientRect();
+    const v = new T.Vector2(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1);
+    this._ray.setFromCamera(v, this._camera);
+    const hits = this._ray.intersectObjects(this._pickables, false);
+    if (!hits.length) return;
+    const h = hits[0];
+    if (h.distance > 4.2) { this._toast('Walk a little closer to reach that'); return; }
+    this._pickUp(h.object.userData.pid, h.instanceId);
+  }
+
+  _pickUp(pid, idx) {
+    const T = window.THREE;
+    const inst = this._inst[pid];
+    const b = this._built[pid];
+    inst.meshes.forEach((im) => { im.setMatrixAt(idx, this._zero); im.instanceMatrix.needsUpdate = true; });
+    const outer = new T.Group();
+    const inner = new T.Group();
+    b.parts.forEach((part) => inner.add(new T.Mesh(part.geo, part.mat)));
+    inner.position.y = -b.h / 2;
+    outer.add(inner);
+    const cam = this._camera;
+    cam.updateMatrixWorld();
+    const local = new T.Matrix4().copy(cam.matrixWorld).invert().multiply(inst.mats[idx]);
+    const p0 = new T.Vector3(), q0 = new T.Quaternion(), s0 = new T.Vector3();
+    local.decompose(p0, q0, s0);
+    p0.add(new T.Vector3(0, b.h / 2, 0).applyQuaternion(q0));
+    outer.position.copy(p0); outer.quaternion.copy(q0);
+    cam.add(outer);
+    const scale = 0.2 / Math.max(b.h, b.fw * 0.85);
+    this._pick = {
+      pid, idx, obj: outer, t: 0, dir: 1, mode: 'hold', p0, q0,
+      p1: new T.Vector3(0, 0.1, -0.56), q1: new T.Quaternion().setFromEuler(new T.Euler(0.1, -0.4, 0)),
+      s1: scale, rx: 0, ry: 0, zoom: 0
+    };
+    this.setState({ sel: pid, qty: 1 });
+  }
+
+  _animPick(dt) {
+    const T = window.THREE;
+    const k = this._pick;
+    const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    if (k.mode === 'cart') {
+      k.t = Math.min(1, k.t + dt / 0.45);
+      const e = ease(k.t);
+      k.obj.position.lerpVectors(k.cartFrom, new T.Vector3(0.19, 0.5, -0.7), e);
+      k.obj.scale.setScalar(k.s1 * (1 - e));
+      if (k.t >= 1) this._restore();
+      return;
+    }
+    k.t = Math.max(0, Math.min(1, k.t + (dt / 0.5) * k.dir));
+    const e = ease(k.t);
+    if (k.t >= 1 && !this._dragging) k.ry += dt * 0.35;
+    const hold = k.q1.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(k.rx, k.ry, 0)));
+    const p1 = k.p1.clone(); p1.z += k.zoom;
+    k.obj.position.lerpVectors(k.p0, p1, e);
+    k.obj.quaternion.slerpQuaternions(k.q0, hold, e);
+    k.obj.scale.setScalar(1 + (k.s1 - 1) * e);
+    if (k.dir < 0 && k.t <= 0) this._restore();
+  }
+
+  _restore() {
+    const k = this._pick;
+    if (!k) return;
+    const inst = this._inst[k.pid];
+    inst.meshes.forEach((im) => { im.setMatrixAt(k.idx, inst.mats[k.idx]); im.instanceMatrix.needsUpdate = true; });
+    this._camera.remove(k.obj);
+    this._pick = null;
+  }
+
+  // ---------- render values ----------
+  renderVals() {
+    const s = Object.assign({ loading: true, failed: false, section: 0, progress: 0, sel: null, qty: 1, cart: {}, toast: '' }, this.state || {});
+    const set = (o) => this.setState(o);
+    const secs = this.sections();
+    const P = this.products();
+    const byId = {}; P.forEach((p) => { byId[p.id] = p; });
+    if (!this._refCb) this._refCb = (el) => { if (el) this._attach(el); };
+    if (!this._h) {
+      this._h = {
+        onDown: (e) => {
+          this._drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: Date.now() };
+          this._dragging = false;
+          if (e.currentTarget && e.currentTarget.setPointerCapture) { try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
+        },
+        onMove: (e) => {
+          const d = this._drag;
+          if (!d || !this._k) return;
+          const dx = e.clientX - d.x, dy = e.clientY - d.y;
+          d.x = e.clientX; d.y = e.clientY;
+          if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) this._dragging = true;
+          if (this._pick && this._pick.mode === 'hold') {
+            this._pick.ry += dx * 0.012;
+            this._pick.rx = Math.max(-1.2, Math.min(1.2, this._pick.rx + dy * 0.01));
+          } else {
+            const k = this._k;
+            k.yawT = Math.max(-1.45, Math.min(1.45, k.yawT + dx * 0.005));
+            k.pitchT = Math.max(-0.65, Math.min(0.4, k.pitchT + dy * 0.004));
+          }
+        },
+        onUp: (e) => {
+          const d = this._drag;
+          this._drag = null;
+          const wasDrag = this._dragging;
+          this._dragging = false;
+          if (d && !wasDrag && Date.now() - d.t < 450 && e.type === 'pointerup') this._tapAt(e.clientX, e.clientY);
+        },
+        onWheel: (e) => {
+          if (!this._k) return;
+          if (this._pick && this._pick.mode === 'hold') { this._pick.zoom = Math.max(-0.22, Math.min(0.25, this._pick.zoom - e.deltaY * 0.0008)); return; }
+          this._k.goal = Math.max(-17.4, Math.min(2.4, (this._k.goal !== null ? this._k.goal : this._k.z) + e.deltaY * 0.004));
+        },
+        fwdDown: () => { if (this._k) { this._k.walk = 1; this._walkT0 = Date.now(); } },
+        backDown: () => { if (this._k) { this._k.walk = -1; this._walkT0 = Date.now(); } },
+        walkStop: () => {
+          if (!this._k || !this._k.walk) return;
+          const dir = this._k.walk;
+          this._k.walk = 0;
+          if (Date.now() - (this._walkT0 || 0) < 180) this._k.goal = Math.max(-17.4, Math.min(2.4, this._k.z - dir * 0.9));
+        },
+        fwdClick: (e) => { if (e.detail === 0 && this._k) this._k.goal = Math.max(-17.4, this._k.z - 1.2); },
+        backClick: (e) => { if (e.detail === 0 && this._k) this._k.goal = Math.min(2.4, this._k.z + 1.2); },
+        lookLeft: () => { if (this._k) { this._k.yawT = 1.3; this._k.pitchT = -0.12; } },
+        lookRight: () => { if (this._k) { this._k.yawT = -1.3; this._k.pitchT = -0.12; } },
+        lookAhead: () => { if (this._k) { this._k.yawT = 0; this._k.pitchT = -0.07; } },
+        putBack: () => { if (this._pick) this._pick.dir = -1; this.setState({ sel: null }); },
+        addCart: () => {
+          const st = this.state || {};
+          const pk = this._pick;
+          if (!pk || !st.sel) return;
+          const p = this.products().find((x) => x.id === st.sel);
+          const cart = Object.assign({}, st.cart || {});
+          cart[st.sel] = (cart[st.sel] || 0) + (st.qty || 1);
+          pk.mode = 'cart'; pk.t = 0; pk.cartFrom = pk.obj.position.clone();
+          this.setState({ cart, sel: null });
+          this._toast((st.qty || 1) + ' × ' + p.brand + ' ' + p.name + ' added');
+        },
+        qtyInc: () => this.setState({ qty: Math.min(20, ((this.state || {}).qty || 1) + 1) }),
+        qtyDec: () => this.setState({ qty: Math.max(1, ((this.state || {}).qty || 1) - 1) })
+      };
+    }
+    const h = this._h;
+
+    const cartIds = Object.keys(s.cart);
+    const cartCount = cartIds.reduce((n, id) => n + s.cart[id], 0);
+    const cartTotal = cartIds.reduce((n, id) => n + byId[id].price * s.cart[id], 0);
+    const sel = s.sel ? byId[s.sel] : null;
+    const selV = sel
+      ? Object.assign({}, sel, { brandUp: sel.brand.toUpperCase(), promo: !!sel.promo, shelf: (this._shelfOf && this._shelfOf[sel.id]) || 'shelf' })
+      : { brand: '', brandUp: '', brandAr: '', name: '', nameAr: '', size: '', price: 0, promo: false, shelf: '' };
+
+    return {
+      sceneRef: this._refCb,
+      onDown: h.onDown, onMove: h.onMove, onUp: h.onUp, onWheel: h.onWheel,
+      fwdDown: h.fwdDown, backDown: h.backDown, walkStop: h.walkStop, fwdClick: h.fwdClick, backClick: h.backClick,
+      lookLeft: h.lookLeft, lookRight: h.lookRight, lookAhead: h.lookAhead,
+      loading: s.loading && !s.failed, failed: s.failed,
+      sectionNo: s.section + 1, sectionName: secs[s.section].name, sectionAr: secs[s.section].ar,
+      progress: s.progress,
+      segments: secs.map((x, i) => ({ bg: i === s.section ? x.color : 'rgba(255,255,255,.75)' })),
+      chips: secs.map((x, i) => ({
+        name: x.name, aria: i === s.section ? 'true' : 'false',
+        bg: i === s.section ? '#1E6B47' : 'rgba(255,255,255,.94)', fg: i === s.section ? '#FFFFFF' : '#1A1C19',
+        pick: () => { if (this._k && !this._pick) { this._k.goal = -(i * 3.6 + 1.3); this._k.yawT = 0; this._k.pitchT = -0.07; } }
+      })),
+      cartCount, cartAria: 'Cart, ' + cartCount + ' items',
+      cartTap: () => this._toast(cartCount ? 'Cart: ' + cartCount + ' items · EGP ' + cartTotal : 'Your cart is empty. Tap a product to pick it up'),
+      showControls: !sel && !s.failed,
+      hint: 'Drag to look around · hold the arrow to walk · tap any pack to pick it up',
+      hasSel: !!sel, sel: selV, qty: s.qty, lineTotal: selV.price * s.qty,
+      qtyInc: h.qtyInc, qtyDec: h.qtyDec, addCart: h.addCart, putBack: h.putBack,
+      toast: s.toast, hasToast: !!s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

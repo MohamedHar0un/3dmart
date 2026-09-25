@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3D Mart admin dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Figtree',system-ui,sans-serif;color:#1A1C19;background:#E9E4D8}
+a{color:#1E6B47}a:hover{color:#14502F}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid #1E6B47;outline-offset:2px}
+.disp{font-family:'Bricolage Grotesque','Figtree',sans-serif}
+.navbtn:hover{background:#2A2D28}
+.row:hover{background:#FAF8F3}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; display: flex; background: #F5F2EA; position: relative; overflow: hidden">
+
+<!-- sidebar -->
+<div style="width: 232px; flex-shrink: 0; background: #1A1C19; color: #FFFFFF; box-sizing: border-box; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px">
+<div style="width: 36px; height: 36px; border-radius: 10px; background: {{primary}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg></div>
+<div><div class="disp" style="font-size: 17px; font-weight: 800">3D Mart</div><div style="font-size: 12px; color: #C9C3B3; font-weight: 600">Platform admin</div></div>
+</div>
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<button class="navbtn" onClick="{{t.pick}}" aria-current="{{t.current}}" style="height: 44px; border: 0; border-radius: 12px; background: {{t.bg}}; color: #FFFFFF; text-align: left; padding: 0 14px; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: space-between">{{t.name}}<sc-if value="{{t.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: #E8793A; color: #1A1C19; font-size: 12px; display: flex; align-items: center; justify-content: center">{{t.badge}}</span></sc-if></button>
+</sc-for>
+<div style="flex-grow: 1"></div>
+<div style="padding: 12px; border-radius: 14px; background: #2A2D28; font-size: 13px; color: #E2DDD0; line-height: 1.5">Signed in as <b>Operations</b><br>Cairo &amp; Giza</div>
+</div>
+
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">
+<div style="height: 76px; flex-shrink: 0; padding: 0 32px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #E2DDD0; box-sizing: border-box">
+<h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 800; flex-grow: 1">{{title}}</h1>
+<span style="padding: 6px 10px; border-radius: 999px; background: #E4DCCB; font-size: 12px; font-weight: 700; color: #5E6259">Sample data</span>
+</div>
+<div style="flex-grow: 1; overflow: auto; padding: 24px 32px 32px; box-sizing: border-box">
+
+<!-- ===== LIVE OPS ===== -->
+<sc-if value="{{isOps}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border-radius: 18px; padding: 18px 20px">
+<div style="font-size: 13px; font-weight: 700; color: #5E6259">{{k.label}}</div>
+<div class="disp" style="font-size: 30px; font-weight: 800; margin-top: 6px">{{k.value}}</div>
+<div style="font-size: 13px; color: #5E6259; margin-top: 2px">{{k.sub}}</div>
+</div>
+</sc-for>
+</div>
+<div style="background: #FFFFFF; border-radius: 18px; overflow: hidden">
+<div style="padding: 18px 20px 10px; display: flex; align-items: center; justify-content: space-between"><div style="font-size: 16px; font-weight: 800">Live orders, all suppliers</div><div style="font-size: 13px; color: #5E6259">{{unassignedText}}</div></div>
+<div style="display: grid; grid-template-columns: 100px minmax(0, 1.2fr) minmax(0, 1.2fr) 90px 110px 140px minmax(0, 1fr) 120px; padding: 10px 20px; font-size: 12px; font-weight: 800; color: #5E6259; letter-spacing: .5px; border-top: 1px solid #E2DDD0; border-bottom: 1px solid #E2DDD0">
+<div>ORDER</div><div>CUSTOMER AREA</div><div>SUPPLIERS</div><div>ITEMS</div><div>PAYMENT</div><div>STATUS</div><div>RIDER</div><div></div>
+</div>
+<sc-for list="{{orders}}" as="o" hint-placeholder-count="7">
+<div class="row" style="display: grid; grid-template-columns: 100px minmax(0, 1.2fr) minmax(0, 1.2fr) 90px 110px 140px minmax(0, 1fr) 120px; padding: 11px 20px; font-size: 14px; border-bottom: 1px solid #EEEAE0; align-items: center">
+<div style="font-weight: 800">{{o.id}}</div><div>{{o.area}}</div><div style="color: #5E6259">{{o.suppliers}}</div><div>{{o.items}}</div><div style="color: #5E6259">{{o.pay}}</div>
+<div><span style="padding: 4px 10px; border-radius: 999px; background: {{o.chipBg}}; color: {{o.chipFg}}; font-size: 12px; font-weight: 800">{{o.status}}</span></div>
+<div style="font-weight: 600; color: {{o.riderC}}">{{o.rider}}</div>
+<div><sc-if value="{{o.needsRider}}" hint-placeholder-val="{{false}}"><button onClick="{{o.assign}}" style="height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: {{primary}}; color: #FFFFFF; font-size: 13px; font-weight: 700">Assign rider</button></sc-if></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<!-- ===== SUPPLIER APPROVALS ===== -->
+<sc-if value="{{isSuppliers}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{apps}}" as="a" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<div style="width: 44px; height: 44px; border-radius: 12px; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-weight: 800">{{a.initials}}</div>
+<div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 800">{{a.name}}</div><div style="font-size: 13px; color: #5E6259">{{a.category}} · {{a.skus}} products · applied {{a.applied}}</div></div>
+<span style="padding: 4px 10px; border-radius: 999px; background: {{a.chipBg}}; color: {{a.chipFg}}; font-size: 12px; font-weight: 800">{{a.status}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{a.docs}}" as="d" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px">
+<span style="width: 22px; height: 22px; border-radius: 999px; background: {{d.bg}}; color: {{d.fg}}; display: flex; align-items: center; justify-content: center"><sc-if value="{{d.ok}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if><sc-if value="{{d.missing}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M12 6v7M12 17.5v.5"></path></svg></sc-if></span>
+<span>{{d.name}}</span><span style="color: #5E6259; font-size: 13px">{{d.state}}</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{a.pending}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 8px">
+<button onClick="{{a.approve}}" disabled="{{a.cantApprove}}" style="height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: {{a.approveBg}}; color: #FFFFFF; font-size: 14px; font-weight: 700">Approve</button>
+<button onClick="{{a.request}}" style="height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #D8D2C3; background: #FFFFFF; color: #1A1C19; font-size: 14px; font-weight: 700">Request documents</button>
+<button onClick="{{a.reject}}" style="height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #8A3D10; font-size: 14px; font-weight: 700">Reject</button>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<!-- ===== AD APPROVALS ===== -->
+<sc-if value="{{isAds}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-size: 14px; color: #5E6259">Every paid placement is checked before it appears inside the 3D store: artwork, claims and dates.</div>
+<sc-for list="{{adQueue}}" as="a" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border-radius: 18px; padding: 16px 20px; display: flex; align-items: center; gap: 18px">
+<div style="width: 120px; height: 84px; border-radius: 10px; border: 4px solid #B4531B; background: #FFFFFF; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0">
+<div style="background: #B4531B; color: #FFFFFF; font-size: 9px; font-weight: 800; padding: 3px 6px">SPONSORED</div>
+<div style="flex-grow: 1; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 6px 4px; border-bottom: 4px solid #B89E78"><span style="display: block; width: 16px; height: 30px; background: {{a.c}}; border: 1px solid rgba(0,0,0,.14)"></span><span style="display: block; width: 16px; height: 30px; background: {{a.c}}; border: 1px solid rgba(0,0,0,.14)"></span><span style="display: block; width: 16px; height: 30px; background: {{a.c}}; border: 1px solid rgba(0,0,0,.14)"></span></div>
+</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="font-size: 16px; font-weight: 800">{{a.name}}</div>
+<div style="font-size: 13px; color: #5E6259">{{a.supplier}} · {{a.placement}} · {{a.dates}} · EGP {{a.budget}} / day</div>
+<div style="font-size: 13px; margin-top: 4px">Claim: “{{a.claim}}”</div>
+</div>
+<span style="padding: 4px 10px; border-radius: 999px; background: {{a.chipBg}}; color: {{a.chipFg}}; font-size: 12px; font-weight: 800">{{a.status}}</span>
+<sc-if value="{{a.pending}}" hint-placeholder-val="{{true}}">
+<button onClick="{{a.approve}}" style="height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: {{primary}}; color: #FFFFFF; font-size: 14px; font-weight: 700">Approve</button>
+<button onClick="{{a.reject}}" style="height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #D8D2C3; background: #FFFFFF; color: #8A3D10; font-size: 14px; font-weight: 700">Reject</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<!-- ===== FLEET ===== -->
+<sc-if value="{{isFleet}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 8px">
+<sc-for list="{{roleChips}}" as="f" hint-placeholder-count="3">
+<button onClick="{{f.pick}}" aria-pressed="{{f.aria}}" style="height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid {{f.bd}}; background: {{f.bg}}; color: {{f.fg}}; font-size: 14px; font-weight: 700">{{f.label}}</button>
+</sc-for>
+</div>
+<div style="background: #FFFFFF; border-radius: 18px; overflow: hidden">
+<div style="display: grid; grid-template-columns: minmax(0, 1.4fr) 140px minmax(0, 1fr) 150px 140px 120px; padding: 12px 20px; font-size: 12px; font-weight: 800; color: #5E6259; letter-spacing: .5px; border-bottom: 1px solid #E2DDD0">
+<div>NAME</div><div>ROLE</div><div>ZONE</div><div>STATUS</div><div>TODAY</div><div>RATING</div>
+</div>
+<sc-for list="{{fleet}}" as="r" hint-placeholder-count="6">
+<div class="row" style="display: grid; grid-template-columns: minmax(0, 1.4fr) 140px minmax(0, 1fr) 150px 140px 120px; padding: 12px 20px; font-size: 14px; border-bottom: 1px solid #EEEAE0; align-items: center">
+<div style="font-weight: 700">{{r.name}}</div><div>{{r.role}}</div><div style="color: #5E6259">{{r.zone}}</div>
+<div style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 999px; background: {{r.dot}}"></span>{{r.status}}</div>
+<div>{{r.today}}</div><div>{{r.rating}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 32px; bottom: 28px; padding: 14px 20px; border-radius: 14px; background: #1A1C19; color: #FFFFFF; font-size: 14px; font-weight: 600">{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"primary":{"editor":"color","default":"#1E6B47","options":["#1E6B47","#1F4E9C","#7A2E5B","#1A1C19"]},"startTab":{"editor":"enum","default":"ops","options":["ops","suppliers","ads","fleet"]},"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const defaults = {
+      tab: this.props.startTab ?? 'ops', role: 'all', toast: '',
+      orders: [
+        { id: '#40218', area: 'Maadi', suppliers: 'Delta Dairy, Crunchy', items: 7, pay: 'Card', st: 1, rider: null },
+        { id: '#40219', area: 'Nasr City', suppliers: 'Fresha', items: 3, pay: 'Cash', st: 1, rider: null },
+        { id: '#40216', area: 'Dokki', suppliers: 'Sunny, Mama', items: 11, pay: 'Fawry', st: 2, rider: 'Karim A.' },
+        { id: '#40214', area: 'Heliopolis', suppliers: 'Nile Farms', items: 4, pay: 'Wallet', st: 2, rider: 'Youssef M.' },
+        { id: '#40212', area: 'Zamalek', suppliers: 'Delta Gold, Leafy', items: 9, pay: 'Card', st: 3, rider: 'Omar S.' },
+        { id: '#40209', area: 'Sheikh Zayed', suppliers: 'Cocoa Bay', items: 2, pay: 'Cash', st: 3, rider: 'Mostafa H.' },
+        { id: '#40205', area: 'New Cairo', suppliers: 'Golden Hen, Siwa Springs', items: 6, pay: 'Card', st: 0, rider: null }
+      ],
+      apps: [
+        { name: 'Siwa Springs Water', category: 'Beverages', skus: 12, applied: '2 days ago', docs: [1, 1, 1], st: 'pending' },
+        { name: 'Harvest Nuts & Dates', category: 'Snacks', skus: 34, applied: '3 days ago', docs: [1, 1, 0], st: 'pending' },
+        { name: 'Brite Home Care', category: 'Household', skus: 18, applied: '5 days ago', docs: [1, 0, 1], st: 'pending' },
+        { name: 'Oven Co. Bakery', category: 'Bakery', skus: 22, applied: '1 week ago', docs: [1, 1, 1], st: 'approved' }
+      ],
+      ads: [
+        { name: 'Greek Yogurt end-cap', supplier: 'Delta Dairy', placement: 'Aisle end-cap', dates: 'Oct 1–31', budget: 400, claim: '15% off all week', c: '#E6EEF7', st: 'pending' },
+        { name: 'Mango Juice entrance sign', supplier: 'Sunny', placement: 'Aisle entrance sign', dates: 'Oct 5–20', budget: 300, claim: '100% natural', c: '#F2A23A', st: 'pending' },
+        { name: 'Salted Chips featured facing', supplier: 'Crunchy', placement: 'Eye-level facing', dates: 'Oct 1–14', budget: 250, claim: 'New bigger bag', c: '#F2C230', st: 'pending' },
+        { name: 'Laundry Gel search boost', supplier: 'Fresha', placement: 'Sponsored search', dates: 'Sep 15–30', budget: 150, claim: 'Cleans in cold water', c: '#3E7FD1', st: 'approved' }
+      ]
+    };
+    const s = Object.assign({}, defaults, this.state || {});
+    const set = (o) => this.setState(o);
+    const primary = this.props.primary ?? '#1E6B47';
+    const flash = (m) => { this.setState({ toast: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 1800); };
+
+    const fleetAll = [
+      { name: 'Karim A.', role: 'Rider', zone: 'Dokki, Mohandessin', st: 'busy', today: '9 deliveries', rating: '4.9' },
+      { name: 'Youssef M.', role: 'Rider', zone: 'Heliopolis', st: 'busy', today: '7 deliveries', rating: '4.8' },
+      { name: 'Omar S.', role: 'Rider', zone: 'Zamalek, Downtown', st: 'busy', today: '11 deliveries', rating: '4.9' },
+      { name: 'Mostafa H.', role: 'Rider', zone: 'Sheikh Zayed', st: 'busy', today: '6 deliveries', rating: '4.7' },
+      { name: 'Ahmed R.', role: 'Rider', zone: 'Maadi', st: 'online', today: '8 deliveries', rating: '4.8' },
+      { name: 'Hany F.', role: 'Rider', zone: 'Nasr City', st: 'online', today: '5 deliveries', rating: '4.6' },
+      { name: 'Mona K.', role: 'Picker', zone: 'Maadi dark store', st: 'online', today: '23 orders packed', rating: '4.9' },
+      { name: 'Salma T.', role: 'Picker', zone: 'Dokki dark store', st: 'busy', today: '19 orders packed', rating: '4.8' },
+      { name: 'Tarek N.', role: 'Rider', zone: 'New Cairo', st: 'offline', today: '—', rating: '4.5' }
+    ];
+    const assigned = s.orders.map((o) => o.rider).filter(Boolean);
+    const freeRiders = fleetAll.filter((r) => r.role === 'Rider' && r.st === 'online' && assigned.indexOf(r.name) < 0);
+
+    const stDefs = [
+      { label: 'New', bg: '#FBE3D2', fg: '#8A3D10' },
+      { label: 'Packing', bg: '#E1E8F5', fg: '#1F3F78' },
+      { label: 'Out for delivery', bg: '#EEE6F5', fg: '#4F2F72' },
+      { label: 'Delivered', bg: '#D6EBDD', fg: '#14502F' }
+    ];
+    const orders = s.orders.map((o, i) => {
+      const d = stDefs[o.st];
+      return Object.assign({}, o, {
+        status: d.label, chipBg: d.bg, chipFg: d.fg,
+        rider: o.rider || 'Unassigned', riderC: o.rider ? '#1A1C19' : '#8A3D10',
+        needsRider: !o.rider && o.st < 3,
+        assign: () => {
+          const r = freeRiders[0];
+          if (!r) { flash('No free riders nearby right now'); return; }
+          const next = s.orders.map((x, j) => (j === i ? Object.assign({}, x, { rider: r.name }) : x));
+          set({ orders: next });
+          flash(r.name + ' assigned to ' + o.id);
+        }
+      });
+    });
+    const unassigned = orders.filter((o) => o.needsRider).length;
+
+    const docNames = ['Commercial register', 'Tax card', 'Food safety certificate'];
+    const appSt = { pending: ['Pending review', '#FBE3D2', '#8A3D10'], approved: ['Approved', '#D6EBDD', '#14502F'], rejected: ['Rejected', '#EEEAE0', '#5E6259'], docs: ['Waiting for documents', '#E1E8F5', '#1F3F78'] };
+    const updApp = (i, patch) => { const apps = s.apps.slice(); apps[i] = Object.assign({}, apps[i], patch); set({ apps }); };
+    const apps = s.apps.map((a, i) => {
+      const complete = a.docs.every(Boolean);
+      const st = appSt[a.st];
+      return Object.assign({}, a, {
+        initials: a.name.split(' ').slice(0, 2).map((w) => w[0]).join(''),
+        status: st[0], chipBg: st[1], chipFg: st[2], pending: a.st === 'pending' || a.st === 'docs',
+        docs: a.docs.map((ok, k) => ({ name: docNames[k], ok: !!ok, missing: !ok, state: ok ? 'uploaded' : 'missing', bg: ok ? '#D6EBDD' : '#FBE3D2', fg: ok ? '#14502F' : '#8A3D10' })),
+        cantApprove: !complete, approveBg: complete ? primary : '#A9A597',
+        approve: () => { if (!complete) return; updApp(i, { st: 'approved' }); flash(a.name + ' approved and can now list products'); },
+        request: () => { updApp(i, { st: 'docs' }); flash('Asked ' + a.name + ' for missing documents'); },
+        reject: () => { updApp(i, { st: 'rejected' }); flash(a.name + ' rejected'); }
+      });
+    });
+
+    const adSt = { pending: ['Waiting for review', '#FBE3D2', '#8A3D10'], approved: ['Approved', '#D6EBDD', '#14502F'], rejected: ['Rejected', '#EEEAE0', '#5E6259'] };
+    const updAd = (i, st) => { const ads = s.ads.slice(); ads[i] = Object.assign({}, ads[i], { st }); set({ ads }); };
+    const adQueue = s.ads.map((a, i) => Object.assign({}, a, {
+      status: adSt[a.st][0], chipBg: adSt[a.st][1], chipFg: adSt[a.st][2], pending: a.st === 'pending',
+      approve: () => { updAd(i, 'approved'); flash(a.name + ' will go live in the 3D store on its start date'); },
+      reject: () => { updAd(i, 'rejected'); flash(a.name + ' sent back to ' + a.supplier); }
+    }));
+
+    const pendingApps = s.apps.filter((a) => a.st === 'pending').length;
+    const pendingAds = s.ads.filter((a) => a.st === 'pending').length;
+    const tabDefs = [['ops', 'Live operations', 0], ['suppliers', 'Supplier approvals', pendingApps], ['ads', 'Ad approvals', pendingAds], ['fleet', 'Riders & pickers', 0]];
+    const tabs = tabDefs.map(([k, name, badge]) => ({ name, badge, hasBadge: badge > 0, pick: () => set({ tab: k }), bg: s.tab === k ? '#2F5E45' : 'transparent', current: s.tab === k ? 'page' : 'false' }));
+
+    const roleChips = [['all', 'Everyone'], ['Rider', 'Riders'], ['Picker', 'Pickers']].map(([k, label]) => ({
+      label, pick: () => set({ role: k }), aria: s.role === k ? 'true' : 'false',
+      bg: s.role === k ? primary : '#FFFFFF', fg: s.role === k ? '#FFFFFF' : '#1A1C19', bd: s.role === k ? primary : '#D8D2C3'
+    }));
+    const stLabel = { online: ['Available', '#2F8F5B'], busy: ['On a job', '#1F4E9C'], offline: ['Offline', '#A9A597'] };
+    const fleet = fleetAll.filter((r) => s.role === 'all' || r.role === s.role).map((r) => {
+      const busy = assigned.indexOf(r.name) >= 0 ? 'busy' : r.st;
+      return Object.assign({}, r, { status: stLabel[busy][0], dot: stLabel[busy][1] });
+    });
+
+    const online = fleetAll.filter((r) => r.role === 'Rider' && r.st !== 'offline').length;
+    return {
+      primary, tabs,
+      title: tabDefs.find((x) => x[0] === s.tab)[1],
+      isOps: s.tab === 'ops', isSuppliers: s.tab === 'suppliers', isAds: s.tab === 'ads', isFleet: s.tab === 'fleet',
+      kpis: [
+        { label: 'Orders today', value: '2,418', sub: 'across 64 suppliers' },
+        { label: 'In progress now', value: String(orders.filter((o) => o.st < 3).length), sub: unassigned + ' waiting for a rider' },
+        { label: 'Average delivery time', value: '38 min', sub: 'target: under 45 min' },
+        { label: 'Riders on shift', value: String(online), sub: freeRiders.length + ' free right now' }
+      ],
+      orders, unassignedText: unassigned ? unassigned + ' orders need a rider' : 'Every order has a rider',
+      apps, adQueue, roleChips, fleet,
+      toast: s.toast, hasToast: !!s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

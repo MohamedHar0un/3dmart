@@ -1,0 +1,108 @@
+{
+    "v": 3,
+    "attachments": {},
+    "boards": {
+        "Admin.dc.html": {
+            "h": 860,
+            "is_interactive": true,
+            "title": "Platform admin dashboard",
+            "w": 1280,
+            "x": 176,
+            "y": 1292
+        },
+        "Arabic.dc.html": {
+            "h": 844,
+            "is_interactive": true,
+            "title": "Shopper app in Arabic (RTL)",
+            "w": 390,
+            "x": 646,
+            "y": -8
+        },
+        "Lite.dc.html": {
+            "h": 844,
+            "is_interactive": true,
+            "title": "List view for low-end phones",
+            "w": 390,
+            "x": 1116,
+            "y": -8
+        },
+        "Main.dc.html": {
+            "h": 844,
+            "is_interactive": true,
+            "title": "Shopper app (Flutter, iOS & Android)",
+            "w": 390,
+            "x": 176,
+            "y": -8
+        },
+        "Proposal.dc.html": {
+            "h": 1000,
+            "title": "Proposed architecture & roadmap",
+            "w": 1280,
+            "x": 1536,
+            "y": 1292
+        },
+        "Supplier.dc.html": {
+            "h": 860,
+            "is_interactive": true,
+            "title": "Supplier dashboard",
+            "w": 1280,
+            "x": 1586,
+            "y": -8
+        },
+        "Aisle3D.dc.html": {
+            "x": 0,
+            "y": 0,
+            "w": 390,
+            "h": 844,
+            "title": "Realistic 3D aisle (walk-through)",
+            "is_interactive": true,
+            "page": "v2"
+        }
+    },
+    "createdOnFiles": {
+        "at": "2026-09-24T12:00:00Z",
+        "v": 1
+    },
+    "designSystems": [],
+    "launch": {
+        "view": "canvas"
+    },
+    "notes": {
+        "t1": {
+            "kind": "title1",
+            "maxW": 2690,
+            "text": "3D Mart: shopper app & supplier dashboard",
+            "w": 240,
+            "x": 150,
+            "y": -292
+        },
+        "t2": {
+            "kind": "title1",
+            "maxW": 2640,
+            "text": "Platform admin & proposal",
+            "w": 240,
+            "x": 150,
+            "y": 992
+        }
+    },
+    "order": [
+        "Main.dc.html",
+        "Arabic.dc.html",
+        "Lite.dc.html",
+        "Supplier.dc.html",
+        "Admin.dc.html",
+        "Proposal.dc.html",
+        "Aisle3D.dc.html"
+    ],
+    "pages": [
+        {
+            "id": "v1",
+            "name": "Version 1"
+        },
+        {
+            "id": "v2",
+            "name": "Version 2 \u00b7 realistic aisle"
+        }
+    ],
+    "title": "3D Mart App Concept"
+}
